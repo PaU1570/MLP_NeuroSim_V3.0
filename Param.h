@@ -45,6 +45,9 @@ class Param {
 public:
 	Param();
 
+	void init(std::string filename);
+	void print();
+
 	/* MNIST dataset */
 	int numMnistTrainImages;// # of training images in MNIST
 	int numMnistTestImages;	// # of testing images in MNIST

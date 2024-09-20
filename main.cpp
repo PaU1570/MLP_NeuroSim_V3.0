@@ -58,8 +58,11 @@
  
 using namespace std;
 
-int main() {
+int main(int argc, char ** argv) {
 	gen.seed(0);
+
+	param->init("config-sample.json");
+	param->print();
 	
 	/* Load in MNIST data */
 	ReadTrainingDataFromFile("patch60000_train.txt", "label60000_train.txt");

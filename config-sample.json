@@ -38,7 +38,6 @@
             "clkFreq": 2e9
         }
     },
-
     "device-params": {
         "type": "realDevice",
         "realDevice": {
