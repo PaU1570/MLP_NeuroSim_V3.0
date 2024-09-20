@@ -35,7 +35,7 @@
             "relaxArrayCellWidth": 0,
             "arrayWireWidth": 100,
             "processNode": 22,
-            "clkFreq": 2e9
+            "clkFreq": 2e10
         }
     },
     "device-params": {
