@@ -72,30 +72,53 @@ int main(int argc, char ** argv) {
 	config_stream.close();
 
 	param->read_config(&config);
-	param->print();
+	//param->print();
+	std::cout << "Config read from file: " << argv[1] << std::endl;
 	
 	/* Load in MNIST data */
 	ReadTrainingDataFromFile("patch60000_train.txt", "label60000_train.txt");
 	ReadTestingDataFromFile("patch10000_test.txt", "label10000_test.txt");
 
-	/* Initialization of synaptic array from input to hidden layer */
-	//arrayIH->Initialization<IdealDevice>();
-	arrayIH->Initialization<RealDevice>(&config); 
-	//arrayIH->Initialization<MeasuredDevice>();
-	//arrayIH->Initialization<SRAM>(param->numWeightBit);
-	//arrayIH->Initialization<DigitalNVM>(param->numWeightBit,true);
-	//arrayIH->Initialization<HybridCell>(); // the 3T1C+2PCM cell
-	//arrayIH->Initialization<_2T1F>();
+	std::string device_type;
+	try
+	{
+		device_type = config.at("device-params").at("type");
+	}
+	catch(const std::exception& e)
+	{
+		std::cerr << "Device type not found in config ('device-params'->'type'): " << e.what() << std::endl;
+		return 1;
+	}
 
-	
-	/* Initialization of synaptic array from hidden to output layer */
-	//arrayHO->Initialization<IdealDevice>();
-	arrayHO->Initialization<RealDevice>(&config);
-	//arrayHO->Initialization<MeasuredDevice>();
-	//arrayHO->Initialization<SRAM>(param->numWeightBit);
-	//arrayHO->Initialization<DigitalNVM>(param->numWeightBit,true);
-	//arrayHO->Initialization<HybridCell>(); // the 3T1C+2PCM cell
-	//arrayHO->Initialization<_2T1F>();
+	if (device_type == "IdealDevice") {
+		/* Initialization of synaptic array from input to hidden layer */
+		arrayIH->Initialization<IdealDevice>(&config);
+		/* Initialization of synaptic array from hidden to output layer */
+		arrayHO->Initialization<IdealDevice>(&config);
+	} else if (device_type == "RealDevice") {
+		arrayIH->Initialization<RealDevice>(&config); 
+		arrayHO->Initialization<RealDevice>(&config);
+	} else if (device_type == "MeasuredDevice") {
+		arrayIH->Initialization<MeasuredDevice>(&config);
+		arrayHO->Initialization<MeasuredDevice>(&config);
+	} else if (device_type == "SRAM") {
+		arrayIH->Initialization<SRAM>(&config, param->numWeightBit);
+		arrayHO->Initialization<SRAM>(&config, param->numWeightBit);
+	} else if (device_type == "DigitalNVM") {
+		arrayIH->Initialization<DigitalNVM>(&config, param->numWeightBit,true);
+		arrayHO->Initialization<DigitalNVM>(&config, param->numWeightBit,true);
+	} else {
+		std::cerr << "Invalid device type: " << device_type << std::endl;
+		return 1;
+	}
+
+	//arrayIH->Initialization<HybridCell>(&config); // the 3T1C+2PCM cell (TODO)
+	//arrayIH->Initialization<_2T1F>(&config); (TODO)
+
+	//arrayHO->Initialization<HybridCell>(&config); // the 3T1C+2PCM cell (TODO)
+	//arrayHO->Initialization<_2T1F>(&config); (TODO)
+
+	std::cout << "Device type: " << device_type << std::endl;
 
     omp_set_num_threads(16);
 	/* Initialization of NeuroSim synaptic cores */
