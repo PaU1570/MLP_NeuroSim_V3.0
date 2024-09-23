@@ -1,7 +1,9 @@
-build/
+.venv/
 .vscode/
 .depend
 main
 *.txt
 *.csv
+*.out
+build/
 data/
