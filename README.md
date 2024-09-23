@@ -49,7 +49,18 @@ Updates on Jan. 20th, 2020:
 
 Updates on Aug. 21st, 2021:
 1. Add the hybrid precision synapse (3T1C+NVM, 2T1F) as device option. You can find more information on this in the ICONS'19 paper mentioned above.  
-2. Add batch size as an input parameter (in param.cpp). 
+2. Add batch size as an input parameter (in param.cpp).
+
+## Configuration usage
+This fork adds support for reading configuration parameters from a JSON file (see <code>config-defaults.json</code> for the file structure and default values). The file is read at runtime, so there is no need recompile when changing configurations. You can also easily switch between configurations saved in different files.
+
+1. Create a configuration file, e.g. <code>example-config.json</code>.
+2. Run the code:
+```
+./main example-config.json
+```
+
+If a configuration value is missing, it will fall back to its default value (note: changing <code>config-defaults.json</code> will not affect the default values, as they are hardcoded), with some exceptions (e.g. <code>rawDataConductanceLTP</code> and <code>rawDataConductanceLTD</code> are required if device type is <code>MeasuredDevice</code>). Configuration values for device types other than the selected type are not required and can be omitted.
 
 ## References related to this tool
 1. Y. Luo, X. Peng and S. Yu, " MLP+NeuroSimV3.0: Improving On-chip Learning Performance with Device to Algorithm Optimizations," 2019 ACM the International Conference on Neuromorphic Systems (ICONS), ACM, New York, NY, USA.
