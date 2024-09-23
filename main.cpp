@@ -55,13 +55,23 @@
 #include "Mapping.h"
 #include "Definition.h"
 #include "omp.h"
- 
-using namespace std;
+#include "json.hpp"
+using json = nlohmann::json;
+
 
 int main(int argc, char ** argv) {
 	gen.seed(0);
 
-	param->init("config-sample.json");
+	if (argc < 2) {
+		std::cerr << "Usage: " << argv[0] << " <config file>" << std::endl;
+		return 1;
+	}
+
+	std::ifstream config_stream(argv[1]);
+	json config = json::parse(config_stream);
+	config_stream.close();
+
+	param->read_config(&config);
 	param->print();
 	
 	/* Load in MNIST data */
@@ -70,7 +80,7 @@ int main(int argc, char ** argv) {
 
 	/* Initialization of synaptic array from input to hidden layer */
 	//arrayIH->Initialization<IdealDevice>();
-	arrayIH->Initialization<RealDevice>(); 
+	arrayIH->Initialization<RealDevice>(&config); 
 	//arrayIH->Initialization<MeasuredDevice>();
 	//arrayIH->Initialization<SRAM>(param->numWeightBit);
 	//arrayIH->Initialization<DigitalNVM>(param->numWeightBit,true);
@@ -80,7 +90,7 @@ int main(int argc, char ** argv) {
 	
 	/* Initialization of synaptic array from hidden to output layer */
 	//arrayHO->Initialization<IdealDevice>();
-	arrayHO->Initialization<RealDevice>();
+	arrayHO->Initialization<RealDevice>(&config);
 	//arrayHO->Initialization<MeasuredDevice>();
 	//arrayHO->Initialization<SRAM>(param->numWeightBit);
 	//arrayHO->Initialization<DigitalNVM>(param->numWeightBit,true);
@@ -135,7 +145,7 @@ int main(int argc, char ** argv) {
     	WeightToConductance();
 	srand(0);	// Pseudorandom number seed
 	
-	ofstream mywriteoutfile;
+	std::ofstream mywriteoutfile;
 	mywriteoutfile.open("output.csv");                                                                                                            
 	for (int i=1; i<=param->totalNumEpochs/param->interNumEpochs; i++){
 		Train(param->numTrainImagesPerEpoch, param->interNumEpochs,param->optimization_type);
@@ -146,7 +156,7 @@ int main(int argc, char ** argv) {
         else if(_2T1F *temp = dynamic_cast<_2T1F*>(arrayIH->cell[0][0]))
             WeightTransfer_2T1F();
                 
-		mywriteoutfile << i*param->interNumEpochs << ", " << (double)correct/param->numMnistTestImages*100 << endl;
+		mywriteoutfile << i*param->interNumEpochs << ", " << (double)correct/param->numMnistTestImages*100 << std::endl;
 		
 		printf("Accuracy at %d epochs is : %.2f%\n", i*param->interNumEpochs, (double)correct/param->numMnistTestImages*100);
 		/* Here the performance metrics of subArray also includes that of neuron peripheries (see Train.cpp and Test.cpp) */

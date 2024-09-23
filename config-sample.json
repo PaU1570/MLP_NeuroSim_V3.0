@@ -35,14 +35,16 @@
             "relaxArrayCellWidth": 0,
             "arrayWireWidth": 100,
             "processNode": 22,
-            "clkFreq": 2e10
+            "clkFreq": 2e9
         }
     },
     "device-params": {
-        "type": "realDevice",
-        "realDevice": {
+        "type": "RealDevice",
+        "RealDevice": {
             "maxConductance": 3.8462e-8,
             "minConductance": 3.0769e-9,
+            "avgMaxConductance": 3.8462e-8,
+            "avgMinConductance": 3.0769e-9,
             "readVoltage": 0.5,
             "readPulseWidth": 5e-9,
             "writeVoltageLTP": 3.2,
