@@ -4,3 +4,4 @@ build/
 main
 *.txt
 *.csv
+data/
