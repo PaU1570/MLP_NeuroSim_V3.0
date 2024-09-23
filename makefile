@@ -38,31 +38,42 @@
 
 .SECONDEXPANSION:
 
+BUILD_DIR := build
 MAINS := main.cpp
 ALLSRC := $(wildcard *.cpp NeuroSim/*.cpp)
 SRC := $(filter-out $(MAINS),$(ALLSRC))
-ALLOBJ := $(ALLSRC:.cpp=.o)
-OBJ := $(SRC:.cpp=.o)
+ALLOBJ := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(ALLSRC))
+OBJ := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(SRC))
 
 CXX := g++
 CXXFLAGS := -fopenmp -O3 -std=c++0x -w
 
 .PHONY: all clean
 all: $(MAINS:.cpp=)
-$(MAINS:.cpp=): $(OBJ) $$@.o
+
+# Rule for creating the main target
+$(MAINS:.cpp=): $(OBJ) $(BUILD_DIR)/$$@.o
 	$(CXX) $(CXXFLAGS) $^ -o $@
-%.o: %.cpp
+
+# Rule for compiling .cpp files into object files in the build directory
+$(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR)
 	$(CXX) -c $(CXXFLAGS) $< -o $@
 
+# Ensure the build directory exists before compiling
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)/NeuroSim
+
+# Dependency generation
 depend: .depend
 .depend: $(ALLSRC)
 	@$(RM) .depend
-	@g++ -MM $(CXXFLAGS) $^ > .depend;
+	@g++ -MM $(CXXFLAGS) $^ | sed 's|\([^:]*\).o:|$(BUILD_DIR)/\1.o:|' > .depend;
 include .depend
 
 clean:
 	$(RM) $(MAINS:.cpp=)
 	$(RM) $(ALLOBJ)
+	$(RM) -r $(BUILD_DIR)
 
 # Run simulation
 NOW := $(shell date +"%Y%m%d_%H%M%S")

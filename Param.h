@@ -37,6 +37,8 @@
 ********************************************************************************/
 
 #include <string>
+#include "json.hpp"
+using json = nlohmann::json;
 
 #ifndef PARAM_H_
 #define PARAM_H_
@@ -44,6 +46,9 @@
 class Param {
 public:
 	Param();
+
+	void read_config(json* config);
+	void print();
 
 	/* MNIST dataset */
 	int numMnistTrainImages;// # of training images in MNIST
@@ -61,7 +66,7 @@ public:
 	double alpha2;		// Learning rate for the synapses from hidden to output layer
 	double maxWeight;	// Upper bound of weight value
 	double minWeight;	// Lower bound of weight value
-    char* optimization_type;
+    std::string optimization_type;
 
 	/* Hardware parameters */
 	bool useHardwareInTrainingFF;   // Use hardware in the feed forward part of training or not (true: realistic hardware, false: ideal software)

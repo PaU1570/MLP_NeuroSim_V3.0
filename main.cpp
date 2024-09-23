@@ -55,34 +55,70 @@
 #include "Mapping.h"
 #include "Definition.h"
 #include "omp.h"
- 
-using namespace std;
+#include "json.hpp"
+using json = nlohmann::json;
 
-int main() {
+
+int main(int argc, char ** argv) {
 	gen.seed(0);
+
+	if (argc < 2) {
+		std::cerr << "Usage: " << argv[0] << " <config file>" << std::endl;
+		return 1;
+	}
+
+	std::ifstream config_stream(argv[1]);
+	json config = json::parse(config_stream);
+	config_stream.close();
+
+	param->read_config(&config);
+	//param->print();
+	std::cout << "Config read from file: " << argv[1] << std::endl;
 	
 	/* Load in MNIST data */
 	ReadTrainingDataFromFile("patch60000_train.txt", "label60000_train.txt");
 	ReadTestingDataFromFile("patch10000_test.txt", "label10000_test.txt");
 
-	/* Initialization of synaptic array from input to hidden layer */
-	//arrayIH->Initialization<IdealDevice>();
-	arrayIH->Initialization<RealDevice>(); 
-	//arrayIH->Initialization<MeasuredDevice>();
-	//arrayIH->Initialization<SRAM>(param->numWeightBit);
-	//arrayIH->Initialization<DigitalNVM>(param->numWeightBit,true);
-	//arrayIH->Initialization<HybridCell>(); // the 3T1C+2PCM cell
-	//arrayIH->Initialization<_2T1F>();
+	std::string device_type;
+	try
+	{
+		device_type = config.at("device-params").at("type");
+	}
+	catch(const std::exception& e)
+	{
+		std::cerr << "Device type not found in config ('device-params'->'type'): " << e.what() << std::endl;
+		return 1;
+	}
 
-	
-	/* Initialization of synaptic array from hidden to output layer */
-	//arrayHO->Initialization<IdealDevice>();
-	arrayHO->Initialization<RealDevice>();
-	//arrayHO->Initialization<MeasuredDevice>();
-	//arrayHO->Initialization<SRAM>(param->numWeightBit);
-	//arrayHO->Initialization<DigitalNVM>(param->numWeightBit,true);
-	//arrayHO->Initialization<HybridCell>(); // the 3T1C+2PCM cell
-	//arrayHO->Initialization<_2T1F>();
+	if (device_type == "IdealDevice") {
+		/* Initialization of synaptic array from input to hidden layer */
+		arrayIH->Initialization<IdealDevice>(&config);
+		/* Initialization of synaptic array from hidden to output layer */
+		arrayHO->Initialization<IdealDevice>(&config);
+	} else if (device_type == "RealDevice") {
+		arrayIH->Initialization<RealDevice>(&config); 
+		arrayHO->Initialization<RealDevice>(&config);
+	} else if (device_type == "MeasuredDevice") {
+		arrayIH->Initialization<MeasuredDevice>(&config);
+		arrayHO->Initialization<MeasuredDevice>(&config);
+	} else if (device_type == "SRAM") {
+		arrayIH->Initialization<SRAM>(&config, param->numWeightBit);
+		arrayHO->Initialization<SRAM>(&config, param->numWeightBit);
+	} else if (device_type == "DigitalNVM") {
+		arrayIH->Initialization<DigitalNVM>(&config, param->numWeightBit,true);
+		arrayHO->Initialization<DigitalNVM>(&config, param->numWeightBit,true);
+	} else {
+		std::cerr << "Invalid device type: " << device_type << std::endl;
+		return 1;
+	}
+
+	//arrayIH->Initialization<HybridCell>(&config); // the 3T1C+2PCM cell (TODO)
+	//arrayIH->Initialization<_2T1F>(&config); (TODO)
+
+	//arrayHO->Initialization<HybridCell>(&config); // the 3T1C+2PCM cell (TODO)
+	//arrayHO->Initialization<_2T1F>(&config); (TODO)
+
+	std::cout << "Device type: " << device_type << std::endl;
 
     omp_set_num_threads(16);
 	/* Initialization of NeuroSim synaptic cores */
@@ -132,7 +168,7 @@ int main() {
     	WeightToConductance();
 	srand(0);	// Pseudorandom number seed
 	
-	ofstream mywriteoutfile;
+	std::ofstream mywriteoutfile;
 	mywriteoutfile.open("output.csv");                                                                                                            
 	for (int i=1; i<=param->totalNumEpochs/param->interNumEpochs; i++){
 		Train(param->numTrainImagesPerEpoch, param->interNumEpochs,param->optimization_type);
@@ -143,7 +179,7 @@ int main() {
         else if(_2T1F *temp = dynamic_cast<_2T1F*>(arrayIH->cell[0][0]))
             WeightTransfer_2T1F();
                 
-		mywriteoutfile << i*param->interNumEpochs << ", " << (double)correct/param->numMnistTestImages*100 << endl;
+		mywriteoutfile << i*param->interNumEpochs << ", " << (double)correct/param->numMnistTestImages*100 << std::endl;
 		
 		printf("Accuracy at %d epochs is : %.2f%\n", i*param->interNumEpochs, (double)correct/param->numMnistTestImages*100);
 		/* Here the performance metrics of subArray also includes that of neuron peripheries (see Train.cpp and Test.cpp) */

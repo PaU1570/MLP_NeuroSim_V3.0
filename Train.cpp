@@ -104,7 +104,7 @@ void WeightTransfer_2T1F(void);
 void WeightTransfer(void);
 void TransferEnergyLatencyCalculation(Array* array, SubArray* subArray);
 
-void Train(const int numTrain, const int epochs, char *optimization_type) {
+void Train(const int numTrain, const int epochs, std::string optimization_type) {
 int numBatchReadSynapse;	    // # of read synapses in a batch read operation (decide later)
 int numBatchWriteSynapse;	// # of write synapses in a batch write operation (decide later)
 double outN1[param->nHide]; // Net input to the hidden layer [param->nHide]
@@ -588,7 +588,7 @@ int train_batchsize = param -> numTrainImagesPerBatch;
                                     momentumPrev1[jj][k] = BETA1*momentumPrev1[jj][k]+(1-BETA1)*gradSum1[jj][k];
                                     gradSquarePrev1[jj][k] = BETA2*gradSquarePrev1[jj][k]+(1-BETA2)*pow(gradSum1[jj][k], 2);
                                 }
-                                else std::cout<<"please specify an optimization method" <<end;
+                                else std::cout<<"please specify an optimization method" << std::endl;
                                 gradSum1[jj][k] = 0;
                             }
                     
