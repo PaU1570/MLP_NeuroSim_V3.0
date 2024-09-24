@@ -322,35 +322,51 @@ def generate_config(meas_data, kpos, kneg, params, device_type='RealDevice', fil
     for key in keys_to_delete:
         del config['device-params'][key]
 
-    maxConductance = 1./min(meas_data[kpos,3][0])
-    minConductance = 1./max(meas_data[kpos,3][0])
-
-    config['device-params'][device_type]['maxConductance'] = maxConductance
-    config['device-params'][device_type]['minConductance'] = minConductance
-    config['device-params'][device_type]['avgMaxConductance'] = maxConductance
-    config['device-params'][device_type]['avgMinConductance'] = minConductance
-    config['device-params'][device_type]['readVoltage'] = params['readVoltage']
-    config['device-params'][device_type]['readPulseWidth'] = params['twidth']
-    config['device-params'][device_type]['writeVoltageLTP'] = params['VEndNeg']
-    config['device-params'][device_type]['writeVoltageLTD'] = params['VEndPos']
-    config['device-params'][device_type]['writePulseWidthLTP'] = params['twidth']
-    config['device-params'][device_type]['writePulseWidthLTD'] = params['twidth']
-    config['device-params'][device_type]['maxNumLevelLTP'] = len(kneg[0])
-    config['device-params'][device_type]['maxNumLevelLTD'] = len(kpos[0])
-    config['device-params'][device_type]['NL'] = params['NL'] # this is not used if nonlinearIV = False
-    config['device-params'][device_type]['nonIdenticalPulse']['enabled'] = True
-    config['device-params'][device_type]['nonIdenticalPulse']['VinitLTP'] = params['VStartNeg']
-    config['device-params'][device_type]['nonIdenticalPulse']['VstepLTP'] = params['stepSizeLTP']
-    config['device-params'][device_type]['nonIdenticalPulse']['VinitLTD'] = params['VStartPos']
-    config['device-params'][device_type]['nonIdenticalPulse']['VstepLTD'] = params['stepSizeLTD']
-    config['device-params'][device_type]['nonIdenticalPulse']['PWinitLTP'] = params['twidth']
-    config['device-params'][device_type]['nonIdenticalPulse']['PWinitLTD'] = params['twidth']
-    config['device-params'][device_type]['nonIdenticalPulse']['PWstepLTP'] = 0
-    config['device-params'][device_type]['nonIdenticalPulse']['PWstepLTD'] = 0
-    config['device-params'][device_type]['weightUpdateVariationParams']['NL_LTP'] = params['best_NL_LTP']
-    config['device-params'][device_type]['weightUpdateVariationParams']['NL_LTD'] = params['best_NL_LTD']
-    config['device-params'][device_type]['weightUpdateVariationParams']['sigmaDtoD'] = params['sigmaDtoD']
-    config['device-params'][device_type]['weightUpdateVariationParams']['sigmaCtoC'] = params['sigmaCtoC']
+    match device_type:
+        case 'RealDevice':
+            maxConductance = 1./min(meas_data[kpos,3][0])
+            minConductance = 1./max(meas_data[kpos,3][0])
+            config['device-params'][device_type]['maxConductance'] = maxConductance
+            config['device-params'][device_type]['minConductance'] = minConductance
+            config['device-params'][device_type]['avgMaxConductance'] = maxConductance
+            config['device-params'][device_type]['avgMinConductance'] = minConductance
+            config['device-params'][device_type]['readVoltage'] = params['readVoltage']
+            config['device-params'][device_type]['readPulseWidth'] = params['twidth']
+            config['device-params'][device_type]['writeVoltageLTP'] = params['VEndNeg']
+            config['device-params'][device_type]['writeVoltageLTD'] = params['VEndPos']
+            config['device-params'][device_type]['writePulseWidthLTP'] = params['twidth']
+            config['device-params'][device_type]['writePulseWidthLTD'] = params['twidth']
+            config['device-params'][device_type]['maxNumLevelLTP'] = len(kneg[0])
+            config['device-params'][device_type]['maxNumLevelLTD'] = len(kpos[0])
+            config['device-params'][device_type]['NL'] = params['NL'] # this is not used if nonlinearIV = False
+            config['device-params'][device_type]['nonIdenticalPulse']['enabled'] = True
+            config['device-params'][device_type]['nonIdenticalPulse']['VinitLTP'] = params['VStartNeg']
+            config['device-params'][device_type]['nonIdenticalPulse']['VstepLTP'] = params['stepSizeLTP']
+            config['device-params'][device_type]['nonIdenticalPulse']['VinitLTD'] = params['VStartPos']
+            config['device-params'][device_type]['nonIdenticalPulse']['VstepLTD'] = params['stepSizeLTD']
+            config['device-params'][device_type]['nonIdenticalPulse']['PWinitLTP'] = params['twidth']
+            config['device-params'][device_type]['nonIdenticalPulse']['PWinitLTD'] = params['twidth']
+            config['device-params'][device_type]['nonIdenticalPulse']['PWstepLTP'] = 0
+            config['device-params'][device_type]['nonIdenticalPulse']['PWstepLTD'] = 0
+            config['device-params'][device_type]['weightUpdateVariationParams']['NL_LTP'] = params['best_NL_LTP']
+            config['device-params'][device_type]['weightUpdateVariationParams']['NL_LTD'] = params['best_NL_LTD']
+            config['device-params'][device_type]['weightUpdateVariationParams']['sigmaDtoD'] = params['sigmaDtoD']
+            config['device-params'][device_type]['weightUpdateVariationParams']['sigmaCtoC'] = params['sigmaCtoC']
+        
+        case 'DigitalNVM':
+            maxConductance = 1./min(meas_data[kpos,3][0])
+            minConductance = 1./max(meas_data[kpos,3][0])
+            config['device-params'][device_type]['maxConductance'] = maxConductance
+            config['device-params'][device_type]['minConductance'] = minConductance
+            config['device-params'][device_type]['avgMaxConductance'] = maxConductance
+            config['device-params'][device_type]['avgMinConductance'] = minConductance
+            config['device-params'][device_type]['readVoltage'] = params['readVoltage']
+            config['device-params'][device_type]['readPulseWidth'] = params['twidth']
+            config['device-params'][device_type]['writeVoltageLTP'] = params['VEndNeg']
+            config['device-params'][device_type]['writeVoltageLTD'] = params['VEndPos']
+            config['device-params'][device_type]['writePulseWidthLTP'] = params['twidth']
+            config['device-params'][device_type]['writePulseWidthLTD'] = params['twidth']
+            config['device-params'][device_type]['NL'] = params['NL'] # this is not used if nonlinearIV = False
 
     if filename is None:
         print(json.dumps(config, indent=4))
@@ -363,7 +379,7 @@ def generate_config(meas_data, kpos, kneg, params, device_type='RealDevice', fil
 if __name__ == '__main__':
     # read filename from command line
     if len(sys.argv) < 2:
-        print("Usage: python nonlinear_fit.py <filename> [noplot | saveplot (optional)]")
+        print("Usage: python nonlinear_fit.py <filename> [noplot | saveplot (optional)] [device type (optional)]")
         sys.exit(1)
 
     filename = sys.argv[1]
@@ -374,10 +390,14 @@ if __name__ == '__main__':
         os.makedirs(results_folder)
 
     plotmode = 1 # 0: no plot, 1: plot, 2: save plot
-    if len(sys.argv) == 3 and sys.argv[2] == 'noplot':
+    if len(sys.argv) >= 3 and sys.argv[2] == 'noplot':
         plotmode = 0
-    if len(sys.argv) == 3 and sys.argv[2] == 'saveplot':
+    if len(sys.argv) >= 3 and sys.argv[2] == 'saveplot':
         plotmode = 2
+
+    device_type = 'RealDevice'
+    if len(sys.argv) >= 4:
+        device_type = sys.argv[3]
 
     for key, value in metadata.items():
         print(f"{key}: {value}")
@@ -447,7 +467,7 @@ if __name__ == '__main__':
     }
 
     config_filename = os.path.join(results_folder, os.path.basename(filename.replace('.csv', '.json')))
-    generate_config(meas_data, kpos, kneg, params, filename=config_filename)
+    generate_config(meas_data, kpos, kneg, params, filename=config_filename, device_type=device_type)
 
     if plotmode == 1:
         print("Waiting for plots to close to terminate program...")
