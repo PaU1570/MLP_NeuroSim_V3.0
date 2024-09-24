@@ -327,8 +327,8 @@ def generate_config(meas_data, kpos, kneg, params, device_type='RealDevice', fil
     config['device-params'][device_type]['writeVoltageLTD'] = params['VEndPos']
     config['device-params'][device_type]['writePulseWidthLTP'] = params['twidth']
     config['device-params'][device_type]['writePulseWidthLTD'] = params['twidth']
-    config['device-params'][device_type]['maxNumLevelLTP'] = len(kneg)
-    config['device-params'][device_type]['maxNumLevelLTD'] = len(kpos)
+    config['device-params'][device_type]['maxNumLevelLTP'] = len(kneg[0])
+    config['device-params'][device_type]['maxNumLevelLTD'] = len(kpos[0])
     config['device-params'][device_type]['NL'] = params['NL'] # this is not used if nonlinearIV = False
     config['device-params'][device_type]['nonIdenticalPulse']['enabled'] = True
     config['device-params'][device_type]['nonIdenticalPulse']['VinitLTP'] = params['VStartNeg']
@@ -405,7 +405,6 @@ if __name__ == '__main__':
     print(f"Best fit parameter A for LTP: {best_A_LTP:.3f}")
     print(f"Best fit parameter A for LTD: {best_A_LTD:.3f}")
 
-    #generate_config()
     best_NL_LTP = map_A_to_NL(best_A_LTP)
     best_NL_LTD = map_A_to_NL(best_A_LTD)
     print(f"Best fit nonlinearity label for LTP: {best_NL_LTP:.2f}")
