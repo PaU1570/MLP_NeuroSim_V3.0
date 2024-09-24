@@ -70,7 +70,7 @@ def plot_1(meas_data, kpos, kneg):
     ax.set(xlabel='Pulse Amplitude (V)', ylabel='R_high (ohm)')
     plt.draw()
 
-def nonlinear_fit(pulse_num_LTP, exp_LTP, pulse_num_LTD, exp_LTD):
+def nonlinear_fit(pulse_num_LTP, exp_LTP, pulse_num_LTD, exp_LTD, plot=True):
     """
     Fit and plot LTP and LTD data according to NeuroSim model.
 
@@ -109,14 +109,15 @@ def nonlinear_fit(pulse_num_LTP, exp_LTP, pulse_num_LTD, exp_LTD):
     r_squared_LTP = r_squared(exp_LTP, model(pulse_num_LTP, best_A_LTP))
     r_squared_LTD = r_squared(exp_LTD, model(pulse_num_LTD, best_A_LTD))
 
-    fig, ax = plt.subplots()
-    ax.plot(pulse_num_LTP, exp_LTP, label='Exp. data (LTP)', ls='none', marker='o', color='b')
-    ax.plot(pulse_num_LTD, exp_LTD, label='Exp. data (LTD)', ls='none', marker='o', color='r')
-    ax.plot(xdata, y_bestfit_LTP, label=f'Best fit (LTP): A={best_A_LTP:.3f}, $R^2$={r_squared_LTP:.3f}', color='b')
-    ax.plot(xdata, y_bestfit_LTD, label=f'Best fit (LTD): A={best_A_LTD:.3f}, $R^2$={r_squared_LTD:.3f}', color='r')
-    ax.set(xlabel='Normalized Pulse Number', ylabel='Normalized Conductance')
-    ax.legend()
-    plt.draw()
+    if plot:
+        fig, ax = plt.subplots()
+        ax.plot(pulse_num_LTP, exp_LTP, label='Exp. data (LTP)', ls='none', marker='o', color='b')
+        ax.plot(pulse_num_LTD, exp_LTD, label='Exp. data (LTD)', ls='none', marker='o', color='r')
+        ax.plot(xdata, y_bestfit_LTP, label=f'Best fit (LTP): A={best_A_LTP:.3f}, $R^2$={r_squared_LTP:.3f}', color='b')
+        ax.plot(xdata, y_bestfit_LTD, label=f'Best fit (LTD): A={best_A_LTD:.3f}, $R^2$={r_squared_LTD:.3f}', color='r')
+        ax.set(xlabel='Normalized Pulse Number', ylabel='Normalized Conductance')
+        ax.legend()
+        plt.draw()
 
     return best_A_LTP, best_A_LTD
 
@@ -354,12 +355,16 @@ def generate_config(meas_data, kpos, kneg, params, device_type='RealDevice', fil
 
 if __name__ == '__main__':
     # read filename from command line
-    if len(sys.argv) != 2:
-        print("Usage: python nonlinear_fit.py <filename>")
+    if len(sys.argv) < 2:
+        print("Usage: python nonlinear_fit.py <filename> [noplot (optional)]")
         sys.exit(1)
 
     filename = sys.argv[1]
     metadata, meas_params, meas_data = read_file(filename)
+
+    plot = True
+    if len(sys.argv) == 3 and sys.argv[2] == 'noplot':
+        plot = False
 
     for key, value in metadata.items():
         print(f"{key}: {value}")
@@ -377,7 +382,8 @@ if __name__ == '__main__':
     kpos = np.where((meas_data[:,1] > VStartPos) & (meas_data[:,1] < VEndPos))
     kneg = np.where((meas_data[:,1] < VStartNeg) & (meas_data[:,1] > VEndNeg))
 
-    plot_1(meas_data, kpos, kneg)
+    if plot:
+        plot_1(meas_data, kpos, kneg)
 
     # get on/off ratio
     onOffRatio = max(meas_data[kpos,3][0]) / min(meas_data[kpos,3][0])
@@ -401,7 +407,7 @@ if __name__ == '__main__':
     pulse_num_LTD_norm = pulse_num_LTD_raw / max(pulse_num_LTD_raw)
     pulse_num_LTP_norm = pulse_num_LTP_raw / max(pulse_num_LTP_raw)
 
-    best_A_LTP, best_A_LTD = nonlinear_fit(pulse_num_LTP_norm, exp_LTP_norm, pulse_num_LTD_norm, exp_LTD_norm)
+    best_A_LTP, best_A_LTD = nonlinear_fit(pulse_num_LTP_norm, exp_LTP_norm, pulse_num_LTD_norm, exp_LTD_norm, plot=plot)
     print(f"Best fit parameter A for LTP: {best_A_LTP:.3f}")
     print(f"Best fit parameter A for LTD: {best_A_LTD:.3f}")
 
@@ -428,5 +434,6 @@ if __name__ == '__main__':
 
     generate_config(meas_data, kpos, kneg, params, filename=filename.replace('.csv', '.json'))
 
-    print("Waiting for plots to close to terminate program...")
-    plt.show()
+    if plot:
+        print("Waiting for plots to close to terminate program...")
+        plt.show()
