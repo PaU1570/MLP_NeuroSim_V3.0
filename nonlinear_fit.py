@@ -297,7 +297,7 @@ def generate_config(meas_data, kpos, kneg, params, device_type='RealDevice', fil
         meas_data: (np.array) Measured data
         kpos: (np.array) Indices of positive pulses
         kneg: (np.array) Indices of negative pulses
-        params: (dict) Measurement parameters: readVoltage, twidth, VStartNeg, VEndNeg, VStartPos, VEndPos, stepSize, NL, best_NL_LTP, best_NL_LTD, sigmaCtoC, sigmaDtoD
+        params: (dict) Measurement parameters: readVoltage, twidth, VStartNeg, VEndNeg, VStartPos, VEndPos, stepSizeLTD, stepSizeLTP, NL, best_NL_LTP, best_NL_LTD, sigmaCtoC, sigmaDtoD
         device_type: (str) Type of device (currently only 'RealDevice' is supported) TODO: add more device types
     """
 
@@ -332,9 +332,9 @@ def generate_config(meas_data, kpos, kneg, params, device_type='RealDevice', fil
     config['device-params'][device_type]['NL'] = params['NL'] # this is not used if nonlinearIV = False
     config['device-params'][device_type]['nonIdenticalPulse']['enabled'] = True
     config['device-params'][device_type]['nonIdenticalPulse']['VinitLTP'] = params['VStartNeg']
-    config['device-params'][device_type]['nonIdenticalPulse']['VstepLTP'] = params['stepSize']
+    config['device-params'][device_type]['nonIdenticalPulse']['VstepLTP'] = params['stepSizeLTP']
     config['device-params'][device_type]['nonIdenticalPulse']['VinitLTD'] = params['VStartPos']
-    config['device-params'][device_type]['nonIdenticalPulse']['VstepLTD'] = params['stepSize']
+    config['device-params'][device_type]['nonIdenticalPulse']['VstepLTD'] = params['stepSizeLTD']
     config['device-params'][device_type]['nonIdenticalPulse']['PWinitLTP'] = params['twidth']
     config['device-params'][device_type]['nonIdenticalPulse']['PWinitLTD'] = params['twidth']
     config['device-params'][device_type]['nonIdenticalPulse']['PWstepLTP'] = 0
@@ -418,7 +418,8 @@ if __name__ == '__main__':
         'VEndNeg': VEndNeg,
         'VStartPos': VStartPos,
         'VEndPos': VEndPos,
-        'stepSize': stepSize,
+        'stepSizeLTP': -stepSize,
+        'stepSizeLTD': stepSize,
         'NL': 40,
         'best_NL_LTP': best_NL_LTP,
         'best_NL_LTD': best_NL_LTD,
