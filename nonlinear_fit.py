@@ -2,6 +2,7 @@ import numpy as np
 from scipy.optimize import curve_fit
 import sys
 import json
+import os
 import matplotlib.pyplot as plt
 plt.style.use('ggplot')
 
@@ -70,7 +71,7 @@ def plot_1(meas_data, kpos, kneg):
     ax.set(xlabel='Pulse Amplitude (V)', ylabel='R_high (ohm)')
     plt.draw()
 
-def nonlinear_fit(pulse_num_LTP, exp_LTP, pulse_num_LTD, exp_LTD, plot=True):
+def nonlinear_fit(pulse_num_LTP, exp_LTP, pulse_num_LTD, exp_LTD, plotmode = 1, filename = None):
     """
     Fit and plot LTP and LTD data according to NeuroSim model.
 
@@ -109,7 +110,7 @@ def nonlinear_fit(pulse_num_LTP, exp_LTP, pulse_num_LTD, exp_LTD, plot=True):
     r_squared_LTP = r_squared(exp_LTP, model(pulse_num_LTP, best_A_LTP))
     r_squared_LTD = r_squared(exp_LTD, model(pulse_num_LTD, best_A_LTD))
 
-    if plot:
+    if plotmode != 0:
         fig, ax = plt.subplots()
         ax.plot(pulse_num_LTP, exp_LTP, label='Exp. data (LTP)', ls='none', marker='o', color='b')
         ax.plot(pulse_num_LTD, exp_LTD, label='Exp. data (LTD)', ls='none', marker='o', color='r')
@@ -117,7 +118,11 @@ def nonlinear_fit(pulse_num_LTP, exp_LTP, pulse_num_LTD, exp_LTD, plot=True):
         ax.plot(xdata, y_bestfit_LTD, label=f'Best fit (LTD): A={best_A_LTD:.3f}, $R^2$={r_squared_LTD:.3f}', color='r')
         ax.set(xlabel='Normalized Pulse Number', ylabel='Normalized Conductance')
         ax.legend()
-        plt.draw()
+
+        if plotmode == 1:
+            plt.draw()
+        else:
+            plt.savefig(filename)
 
     return best_A_LTP, best_A_LTD
 
@@ -303,7 +308,9 @@ def generate_config(meas_data, kpos, kneg, params, device_type='RealDevice', fil
     """
 
     # load default config
-    with open('config-defaults.json', 'r') as file:
+    script_path = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(script_path, 'config-defaults.json')
+    with open(config_path, 'r') as file:
         config = json.load(file)
   
     # delete configuration for other device types to keep it uncluttered
@@ -356,15 +363,21 @@ def generate_config(meas_data, kpos, kneg, params, device_type='RealDevice', fil
 if __name__ == '__main__':
     # read filename from command line
     if len(sys.argv) < 2:
-        print("Usage: python nonlinear_fit.py <filename> [noplot (optional)]")
+        print("Usage: python nonlinear_fit.py <filename> [noplot | saveplot (optional)]")
         sys.exit(1)
 
     filename = sys.argv[1]
     metadata, meas_params, meas_data = read_file(filename)
 
-    plot = True
+    results_folder = os.path.join(os.path.dirname(filename), 'Results')
+    if not os.path.exists(results_folder):
+        os.makedirs(results_folder)
+
+    plotmode = 1 # 0: no plot, 1: plot, 2: save plot
     if len(sys.argv) == 3 and sys.argv[2] == 'noplot':
-        plot = False
+        plotmode = 0
+    if len(sys.argv) == 3 and sys.argv[2] == 'saveplot':
+        plotmode = 2
 
     for key, value in metadata.items():
         print(f"{key}: {value}")
@@ -382,14 +395,14 @@ if __name__ == '__main__':
     kpos = np.where((meas_data[:,1] > VStartPos) & (meas_data[:,1] < VEndPos))
     kneg = np.where((meas_data[:,1] < VStartNeg) & (meas_data[:,1] > VEndNeg))
 
-    if plot:
+    if plotmode == 1:
         plot_1(meas_data, kpos, kneg)
 
     # get on/off ratio
     onOffRatio = max(meas_data[kpos,3][0]) / min(meas_data[kpos,3][0])
 
     # write results to file
-    allResults_filename = filename.replace('.csv', '_AllResults.dat')
+    allResults_filename = os.path.join(results_folder, os.path.basename(filename.replace('.csv', '_AllResults.dat')))
     with open(allResults_filename, 'w') as f:
         f.write(f"VStartPos={VStartPos} V, VEndPos={VEndPos} V, VStartNeg={VStartNeg} V, VEndNeg={VEndNeg} V, twidth={twidth} s, onOffRatio={onOffRatio}\n")
         f.write("Pulse Number,index,Pulse Amplitude (V),R_low (ohm),R_high (ohm)\n")
@@ -407,7 +420,8 @@ if __name__ == '__main__':
     pulse_num_LTD_norm = pulse_num_LTD_raw / max(pulse_num_LTD_raw)
     pulse_num_LTP_norm = pulse_num_LTP_raw / max(pulse_num_LTP_raw)
 
-    best_A_LTP, best_A_LTD = nonlinear_fit(pulse_num_LTP_norm, exp_LTP_norm, pulse_num_LTD_norm, exp_LTD_norm, plot=plot)
+    plot_filename = os.path.join(results_folder, os.path.basename(filename.replace('.csv', '_fit.png')))
+    best_A_LTP, best_A_LTD = nonlinear_fit(pulse_num_LTP_norm, exp_LTP_norm, pulse_num_LTD_norm, exp_LTD_norm, plotmode=plotmode, filename=plot_filename)
     print(f"Best fit parameter A for LTP: {best_A_LTP:.3f}")
     print(f"Best fit parameter A for LTD: {best_A_LTD:.3f}")
 
@@ -432,8 +446,9 @@ if __name__ == '__main__':
         'sigmaDtoD': 0.05
     }
 
-    generate_config(meas_data, kpos, kneg, params, filename=filename.replace('.csv', '.json'))
+    config_filename = os.path.join(results_folder, os.path.basename(filename.replace('.csv', '.json')))
+    generate_config(meas_data, kpos, kneg, params, filename=config_filename)
 
-    if plot:
+    if plotmode == 1:
         print("Waiting for plots to close to terminate program...")
         plt.show()
