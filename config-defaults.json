@@ -54,7 +54,6 @@
             "writeEnergy": 0,
             "maxNumLevelLTP": 97,
             "maxNumLevelLTD": 100,
-            "numPulse": 0,
             "cmosAccess": true,
             "FeFET": false,
             "gateCapFeFET": 2.1717e-18,
@@ -72,8 +71,7 @@
                 "PWinitLTP": 75e-9,
                 "PWstepLTP": 5e-9,
                 "PWinitLTD": 75e-9,
-                "PWstepLTD": 5e-9,
-                "writeVoltageSquareSum": 0
+                "PWstepLTD": 5e-9
             },
             "readNoise": false,
             "sigmaReadNoise": 0,
@@ -112,7 +110,6 @@
             "writeEnergy": 0,
             "maxNumLevelLTP": 64,
             "maxNumLevelLTD": 64,
-            "numPulse": 0,
             "cmosAccess": true,
             "FeFET": false,
             "gateCapFeFET": 2.1717e-18,
@@ -145,7 +142,6 @@
             "writePulseWidthLTP": 10e-9,
             "writePulseWidthLTD": 10e-9,
             "writeEnergy": 0,
-            "numPulse": 0,
             "cmosAccess": true,
             "FeFET": false,
             "gateCapFeFET": 2.1717e-18,
@@ -161,8 +157,7 @@
                 "PWinitLTP": 75e-9,
                 "PWstepLTP": 5e-9,
                 "PWinitLTD": 75e-9,
-                "PWstepLTD": 5e-9,
-                "writeVoltageSquareSum": 0
+                "PWstepLTD": 5e-9
             },
             "NL": 10,
             "readNoise": false,

@@ -172,7 +172,7 @@ IdealDevice::IdealDevice(int x, int y, json* config) {
 	writeEnergy = id->value("writeEnergy", 0);	// Dynamic variable for calculation of write energy (J)
 	maxNumLevelLTP = id->value("maxNumLevelLTP", 64);	// Maximum number of conductance states during LTP or weight increase
 	maxNumLevelLTD = id->value("maxNumLevelLTD", 64);	// Maximum number of conductance states during LTD or weight decrease
-	numPulse = id->value("numPulse", 0);	// Number of write pulses used in the most recent write operation (dynamic variable)
+	numPulse = 0;	// Number of write pulses used in the most recent write operation (dynamic variable)
 	cmosAccess = id->value("cmosAccess", true);	// True: Pseudo-crossbar (1T1R), false: cross-point
 	FeFET = id->value("FeFET", false);		// True: FeFET structure (Pseudo-crossbar only, should be cmosAccess=1)
 	gateCapFeFET = id->value("gateCapFeFET", 2.1717e-18);	// Gate capacitance of FeFET (F)
@@ -280,7 +280,7 @@ RealDevice::RealDevice(int x, int y, json* config) {
 	writeEnergy = rd->value("writeEnergy", 0);	// Dynamic variable for calculation of write energy (J)
 	maxNumLevelLTP = rd->value("maxNumLevelLTP", 97);	// Maximum number of conductance states during LTP or weight increase
 	maxNumLevelLTD = rd->value("maxNumLevelLTD", 100);	// Maximum number of conductance states during LTD or weight decrease
-	numPulse = rd->value("numPulse", 0);	// Number of write pulses used in the most recent write operation (dynamic variable)
+	numPulse = 0;	// Number of write pulses used in the most recent write operation (dynamic variable)
 	cmosAccess = rd->value("cmosAccess", true);	// True: Pseudo-crossbar (1T1R), false: cross-point
     FeFET = rd->value("FeFET", false);		// True: FeFET structure (Pseudo-crossbar only, should be cmosAccess=1)
 	gateCapFeFET = rd->value("gateCapFeFET", 2.1717e-18);	// Gate capacitance of FeFET (F)
@@ -304,7 +304,7 @@ RealDevice::RealDevice(int x, int y, json* config) {
 		PWstepLTP = rd->at("nonIdenticalPulse").value("PWstepLTP", 5e-9);	// Write pulse width for LTP or weight increase (s)
 		PWinitLTD = rd->at("nonIdenticalPulse").value("PWinitLTD", 75e-9);	// Initial write pulse width for LTD or weight decrease (s)
 		PWstepLTD = rd->at("nonIdenticalPulse").value("PWstepLTD", 5e-9);	// Write pulse width for LTD or weight decrease (s)
-		writeVoltageSquareSum = rd->at("nonIdenticalPulse").value("writeVoltageSquareSum", 0);	// Sum of V^2 of non-identical pulses (dynamic variable)
+		writeVoltageSquareSum = 0;	// Sum of V^2 of non-identical pulses (dynamic variable)
 	}
 	readNoise = rd->value("readNoise", false);		// Consider read noise or not
 	sigmaReadNoise = rd->value("sigmaReadNoise", 0);		// Sigma of read noise in gaussian distribution
@@ -461,7 +461,7 @@ MeasuredDevice::MeasuredDevice(int x, int y, json* config) {
 	writePulseWidthLTP = md->value("writePulseWidthLTP", 100e-9);	// Write pulse width (s) for LTP or weight increase
 	writePulseWidthLTD = md->value("writePulseWidthLTD", 100e-9);	// Write pulse width (s) for LTD or weight decrease
 	writeEnergy = md->value("writeEnergy", 0.0);	// Dynamic variable for calculation of write energy (J)
-	numPulse = md->value("numPulse", 0);	// Number of write pulses used in the most recent write operation (dynamic variable)
+	numPulse = 0;	// Number of write pulses used in the most recent write operation (dynamic variable)
 	cmosAccess = md->value("cmosAccess", true);	// True: Pseudo-crossbar (1T1R), false: cross-point
 	FeFET = md->value("FeFET", false);	// True: FeFET structure (Pseudo-crossbar only, should be cmosAccess=1)
 	gateCapFeFET = md->value("gateCapFeFET", 2.1717e-18);	// Gate capacitance of FeFET (F)
@@ -478,7 +478,7 @@ MeasuredDevice::MeasuredDevice(int x, int y, json* config) {
 		PWstepLTP = md->at("nonIdenticalPulse").value("PWstepLTP", 5e-9);	// Write pulse width for LTP or weight increase (s)
 		PWinitLTD = md->at("nonIdenticalPulse").value("PWinitLTD", 75e-9);	// Initial write pulse width for LTD or weight decrease (s)
 		PWstepLTD = md->at("nonIdenticalPulse").value("PWstepLTD", 5e-9);	// Write pulse width for LTD or weight decrease (s)
-		writeVoltageSquareSum = md->at("nonIdenticalPulse").value("writeVoltageSquareSum", 0.0);	// Sum of V^2 of non-identical pulses (dynamic variable)
+		writeVoltageSquareSum = 0;	// Sum of V^2 of non-identical pulses (dynamic variable)
 	}
 	readNoise = md->value("readNoise", false);	// Consider read noise or not
 	sigmaReadNoise = md->value("sigmaReadNoise", 0.0289);	// Sigma of read noise in gaussian distribution
