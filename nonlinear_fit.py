@@ -299,7 +299,7 @@ def map_A_to_NL(A):
     return sign * 0.01 * (min_index + 1)
     
 
-def generate_config(meas_data, kpos, kneg, params, device_type='RealDevice', filename=None):
+def generate_config(meas_data, kpos, kneg, params, device_type='RealDevice', filename=None, ref_config=None):
     """
     Generate a JSON configuration file based on the measured data and the best fit parameters.
 
@@ -311,9 +311,12 @@ def generate_config(meas_data, kpos, kneg, params, device_type='RealDevice', fil
         device_type: (str) Type of device (currently only 'RealDevice' is supported) TODO: add more device types
     """
 
-    # load default config
-    script_path = os.path.dirname(os.path.abspath(__file__))
-    config_path = os.path.join(script_path, 'config-defaults.json')
+    # load reference config
+    if ref_config is None:
+        script_path = os.path.dirname(os.path.abspath(__file__))
+        config_path = os.path.join(script_path, 'config-defaults.json')
+    else:
+        config_path = ref_config
     with open(config_path, 'r') as file:
         config = json.load(file)
   
@@ -387,7 +390,7 @@ if __name__ == '__main__':
     parser.add_argument('--plotmode', type=str, choices=['noplot', 'plot', 'saveplot'], default='plot', help='Plot mode')
     parser.add_argument('--device', type=str, choices=['RealDevice', 'DigitalNVM'], default='RealDevice', help='Device type')
     parser.add_argument('--dest', type=str, help='Destination folder for the results')
-    parser.add_argument('--config', dest='saveconf', action='store_true', help='Save configuration file')
+    parser.add_argument('--configref', type=str, help='Reference configuration file')
     parser.add_argument('--summary', dest='savesummary', action='store_true', help='Save summary file')
     parser.add_argument('--verbose', dest='verbose', action='store_true', help='Verbose mode')
 
@@ -398,8 +401,10 @@ if __name__ == '__main__':
     plotmode_map = {'plot': 1, 'noplot': 0, 'saveplot': 2}
     plotmode = plotmode_map[args.plotmode]
     
+    saveconf = args.configref is not None
+    
     results_folder = args.dest if args.dest is not None else os.path.join(os.path.dirname(filename), 'Results')
-    if args.saveconf or args.savesummary or plotmode != 0:
+    if saveconf or args.savesummary or plotmode != 0:
         if not os.path.exists(results_folder):
             os.makedirs(results_folder)
 
@@ -485,9 +490,9 @@ if __name__ == '__main__':
         'sigmaDtoD': 0.05
     }
 
-    if args.saveconf:
+    if saveconf:
         config_filename = os.path.join(results_folder, os.path.basename(filename.replace('.csv', '.json')))
-        generate_config(meas_data, kpos, kneg, params, filename=config_filename, device_type=device_type)
+        generate_config(meas_data, kpos, kneg, params, filename=config_filename, device_type=device_type, ref_config=args.configref)
 
     if plotmode == 1:
         print("Waiting for plots to close to terminate program...")
