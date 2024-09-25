@@ -42,6 +42,7 @@
 #include "Param.h"
 
 Param::Param() {
+	numThreads = 16;
 	/* MNIST dataset */
 	numMnistTrainImages = 60000;// # of training images in MNIST
 	numMnistTestImages = 10000;	// # of testing images in MNIST
@@ -90,6 +91,8 @@ Param::Param() {
 void Param::read_config(json* config) {
 
 	json* p = &(config->at("simulation-params"));
+
+	numThreads = p->value("numThreads", 16);
 
 	/* MNIST dataset */
 	numMnistTrainImages = p->at("mnist").value("numMnistTrainImages", 60000);// # of training images in MNIST

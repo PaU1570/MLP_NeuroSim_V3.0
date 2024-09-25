@@ -120,7 +120,7 @@ int main(int argc, char ** argv) {
 
 	std::cout << "Device type: " << device_type << std::endl;
 
-    omp_set_num_threads(16);
+    omp_set_num_threads(param->numThreads);
 	/* Initialization of NeuroSim synaptic cores */
 	param->relaxArrayCellWidth = 0;
 	NeuroSimSubArrayInitialize(subArrayIH, arrayIH, inputParameterIH, techIH, cellIH);

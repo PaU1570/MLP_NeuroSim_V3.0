@@ -50,6 +50,8 @@ public:
 	void read_config(json* config);
 	void print();
 
+	int numThreads;
+
 	/* MNIST dataset */
 	int numMnistTrainImages;// # of training images in MNIST
 	int numMnistTestImages;	// # of testing images in MNIST
