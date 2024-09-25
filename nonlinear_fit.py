@@ -3,6 +3,7 @@ from scipy.optimize import curve_fit
 import sys
 import json
 import os
+import argparse
 import matplotlib.pyplot as plt
 plt.style.use('ggplot')
 
@@ -377,27 +378,31 @@ def generate_config(meas_data, kpos, kneg, params, device_type='RealDevice', fil
 
 
 if __name__ == '__main__':
-    # read filename from command line
-    if len(sys.argv) < 2:
-        print("Usage: python nonlinear_fit.py <filename> [noplot | saveplot (optional)] [device type (optional)]")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description='Nonlinear fit for NeuroSim')
 
-    filename = sys.argv[1]
+    parser.add_argument('filename', type=str, help='Path to the input file')
+    parser.add_argument('--plotmode', type=str, choices=['noplot', 'plot', 'saveplot'], default='plot', help='Plot mode')
+    parser.add_argument('--device', type=str, choices=['RealDevice', 'DigitalNVM'], default='RealDevice', help='Device type')
+    parser.add_argument('--dest', type=str, help='Destination folder for the results')
+    parser.add_argument('--config', dest='saveconf', action='store_true', help='Save configuration file')
+    parser.add_argument('--summary', dest='savesummary', action='store_true', help='Save summary file')
+
+    args = parser.parse_args()
+    filename = args.filename
     metadata, meas_params, meas_data = read_file(filename)
 
-    results_folder = os.path.join(os.path.dirname(filename), 'Results')
-    if not os.path.exists(results_folder):
-        os.makedirs(results_folder)
+    plotmode_map = {'plot': 1, 'noplot': 0, 'saveplot': 2}
+    plotmode = plotmode_map[args.plotmode]
+    
+    results_folder = args.dest if args.dest is not None else os.path.join(os.path.dirname(filename), 'Results')
+    if args.saveconf or args.savesummary or plotmode != 0:
+        if not os.path.exists(results_folder):
+            os.makedirs(results_folder)
 
-    plotmode = 1 # 0: no plot, 1: plot, 2: save plot
-    if len(sys.argv) >= 3 and sys.argv[2] == 'noplot':
-        plotmode = 0
-    if len(sys.argv) >= 3 and sys.argv[2] == 'saveplot':
-        plotmode = 2
+    device_type = args.device
 
-    device_type = 'RealDevice'
-    if len(sys.argv) >= 4:
-        device_type = sys.argv[3]
+    print(f"Plot mode: {plotmode} ({args.plotmode})")
+    print(f"Device type: {device_type}")
 
     for key, value in metadata.items():
         print(f"{key}: {value}")
@@ -422,12 +427,13 @@ if __name__ == '__main__':
     onOffRatio = max(meas_data[kpos,3][0]) / min(meas_data[kpos,3][0])
 
     # write results to file
-    allResults_filename = os.path.join(results_folder, os.path.basename(filename.replace('.csv', '_AllResults.dat')))
-    with open(allResults_filename, 'w') as f:
-        f.write(f"VStartPos={VStartPos} V, VEndPos={VEndPos} V, VStartNeg={VStartNeg} V, VEndNeg={VEndNeg} V, twidth={twidth} s, onOffRatio={onOffRatio}\n")
-        f.write("Pulse Number,index,Pulse Amplitude (V),R_low (ohm),R_high (ohm)\n")
-        for i, (index, pulse_amplitude, R_low, R_high) in enumerate(np.vstack((meas_data[kpos,:][0], meas_data[kneg,:][0]))):
-            f.write(f"{i+1},{int(index)},{pulse_amplitude},{R_low},{R_high}\n")
+    if args.savesummary:
+        allResults_filename = os.path.join(results_folder, os.path.basename(filename.replace('.csv', '_AllResults.dat')))
+        with open(allResults_filename, 'w') as f:
+            f.write(f"VStartPos={VStartPos} V, VEndPos={VEndPos} V, VStartNeg={VStartNeg} V, VEndNeg={VEndNeg} V, twidth={twidth} s, onOffRatio={onOffRatio}\n")
+            f.write("Pulse Number,index,Pulse Amplitude (V),R_low (ohm),R_high (ohm)\n")
+            for i, (index, pulse_amplitude, R_low, R_high) in enumerate(np.vstack((meas_data[kpos,:][0], meas_data[kneg,:][0]))):
+                f.write(f"{i+1},{int(index)},{pulse_amplitude},{R_low},{R_high}\n")
 
 
     exp_LTD_raw = np.flip(1. / meas_data[kpos,3][0])
@@ -466,8 +472,9 @@ if __name__ == '__main__':
         'sigmaDtoD': 0.05
     }
 
-    config_filename = os.path.join(results_folder, os.path.basename(filename.replace('.csv', '.json')))
-    generate_config(meas_data, kpos, kneg, params, filename=config_filename, device_type=device_type)
+    if args.saveconf:
+        config_filename = os.path.join(results_folder, os.path.basename(filename.replace('.csv', '.json')))
+        generate_config(meas_data, kpos, kneg, params, filename=config_filename, device_type=device_type)
 
     if plotmode == 1:
         print("Waiting for plots to close to terminate program...")
