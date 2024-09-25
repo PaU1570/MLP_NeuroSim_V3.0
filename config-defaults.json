@@ -7,7 +7,7 @@
         "algorithm": {
             "numTrainImagesPerEpoch": 8000,
             "numTrainImagesPerBatch": 1,
-            "totalNumEpochs": 125,
+            "totalNumEpochs": 50,
             "interNumEpochs": 1,
             "nInput": 400,
             "nHide": 100,
