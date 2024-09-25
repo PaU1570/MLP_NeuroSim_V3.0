@@ -389,6 +389,7 @@ if __name__ == '__main__':
     parser.add_argument('--dest', type=str, help='Destination folder for the results')
     parser.add_argument('--config', dest='saveconf', action='store_true', help='Save configuration file')
     parser.add_argument('--summary', dest='savesummary', action='store_true', help='Save summary file')
+    parser.add_argument('--verbose', dest='verbose', action='store_true', help='Verbose mode')
 
     args = parser.parse_args()
     filename = args.filename
@@ -404,11 +405,12 @@ if __name__ == '__main__':
 
     device_type = args.device
 
-    for key, value in metadata.items():
-        print(f"{key}: {value}")
+    if args.verbose:
+        for key, value in metadata.items():
+            print(f"{key}: {value}")
 
-    for key, value in meas_params.items():
-        print(f"{key}: {value}")
+        for key, value in meas_params.items():
+            print(f"{key}: {value}")
 
     VStartPos = max(0.1, meas_params['startVolage1']) # (sic)
     VEndPos = min(4.1, meas_params['endVoltage1'])
@@ -457,13 +459,15 @@ if __name__ == '__main__':
 
     plot_filename = os.path.join(results_folder, os.path.basename(filename.replace('.csv', '_fit.png')))
     best_A_LTP, best_A_LTD = nonlinear_fit(pulse_num_LTP_norm, exp_LTP_norm, pulse_num_LTD_norm, exp_LTD_norm, plotmode=plotmode, filename=plot_filename)
-    print(f"Best fit parameter A for LTP: {best_A_LTP:.3f}")
-    print(f"Best fit parameter A for LTD: {best_A_LTD:.3f}")
+    if args.verbose:
+        print(f"Best fit parameter A for LTP: {best_A_LTP:.3f}")
+        print(f"Best fit parameter A for LTD: {best_A_LTD:.3f}")
 
     best_NL_LTP = map_A_to_NL(best_A_LTP)
     best_NL_LTD = map_A_to_NL(best_A_LTD)
-    print(f"Best fit nonlinearity label for LTP: {best_NL_LTP:.2f}")
-    print(f"Best fit nonlinearity label for LTD: {best_NL_LTD:.2f}")
+    if args.verbose:
+        print(f"Best fit nonlinearity label for LTP: {best_NL_LTP:.2f}")
+        print(f"Best fit nonlinearity label for LTD: {best_NL_LTD:.2f}")
 
     params = {
         'readVoltage': 0.1,
