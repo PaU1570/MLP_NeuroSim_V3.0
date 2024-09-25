@@ -31,18 +31,20 @@ def read_file(filename):
         # Extract metadata
         test_date = lines[1].split('\t')[1].strip()
         test_time = lines[2].split('\t')[1].strip()
-        device_id = lines[3].split('\t')[1].strip()
-        metadata = {'test_date': test_date, 'test_time': test_time, 'device_id': device_id}
+        device = lines[3].split('\t')[1].strip()
+        device_name, device_id = device.split('_')
+        metadata = {'test_date': test_date, 'test_time': test_time, 'device_name': device_name, 'device_id': device_id}
 
         # Extract measurement parameters
         param_line = lines[8].strip().split(',')
         value_line = lines[9].strip().split(',')
         meas_params = dict()
         for param, value in zip(param_line, value_line):
-            try:
-                meas_params[param] = float(value)
-            except ValueError:
-                meas_params[param] = value
+            if len(param) > 0:
+                try:
+                    meas_params[param] = float(value)
+                except ValueError:
+                    meas_params[param] = value
 
     # read measurement data
     meas_data = np.loadtxt(filename, delimiter=',', skiprows=12)
@@ -124,6 +126,7 @@ def nonlinear_fit(pulse_num_LTP, exp_LTP, pulse_num_LTD, exp_LTD, plotmode = 1, 
             plt.draw()
         else:
             plt.savefig(filename)
+            print(f'Plot saved as {filename}')
 
     return best_A_LTP, best_A_LTD
 
@@ -401,9 +404,6 @@ if __name__ == '__main__':
 
     device_type = args.device
 
-    print(f"Plot mode: {plotmode} ({args.plotmode})")
-    print(f"Device type: {device_type}")
-
     for key, value in metadata.items():
         print(f"{key}: {value}")
 
@@ -428,12 +428,21 @@ if __name__ == '__main__':
 
     # write results to file
     if args.savesummary:
-        allResults_filename = os.path.join(results_folder, os.path.basename(filename.replace('.csv', '_AllResults.dat')))
+        allResults_filename = os.path.join(results_folder, os.path.basename(filename.replace('.csv', '_Summary.dat')))
         with open(allResults_filename, 'w') as f:
-            f.write(f"VStartPos={VStartPos} V, VEndPos={VEndPos} V, VStartNeg={VStartNeg} V, VEndNeg={VEndNeg} V, twidth={twidth} s, onOffRatio={onOffRatio}\n")
+            f.write(','.join(list(metadata.keys())) + '\n')
+            f.write(','.join(list(metadata.values())) + '\n')
+            f.write(','.join(list(meas_params.keys())) + '\n')
+            f.write(','.join([str(x) for x in list(meas_params.values())]) + '\n')
+
+            f.write(f"VStartPos (V),VEndPos (V),VStartNeg (V),VEndNeg (V),twidth (s),onOffRatio\n")
+            f.write(f"{VStartPos},{VEndPos},{VStartNeg},{VEndNeg},{twidth},{onOffRatio}\n")
+            
             f.write("Pulse Number,index,Pulse Amplitude (V),R_low (ohm),R_high (ohm)\n")
             for i, (index, pulse_amplitude, R_low, R_high) in enumerate(np.vstack((meas_data[kpos,:][0], meas_data[kneg,:][0]))):
                 f.write(f"{i+1},{int(index)},{pulse_amplitude},{R_low},{R_high}\n")
+
+        print("Summary file written to", allResults_filename)
 
 
     exp_LTD_raw = np.flip(1. / meas_data[kpos,3][0])
