@@ -375,6 +375,26 @@ def generate_config(meas_data, kpos, kneg, params, device_type='RealDevice', fil
             config['device-params'][device_type]['writePulseWidthLTD'] = params['twidth']
             config['device-params'][device_type]['NL'] = params['NL'] # this is not used if nonlinearIV = False
 
+        case 'MeasuredDevice':
+            config['device-params'][device_type]['readVoltage'] = params['readVoltage']
+            config['device-params'][device_type]['readPulseWidth'] = params['twidth']
+            config['device-params'][device_type]['writeVoltageLTP'] = params['VEndNeg']
+            config['device-params'][device_type]['writeVoltageLTD'] = params['VEndPos']
+            config['device-params'][device_type]['writePulseWidthLTP'] = params['twidth']
+            config['device-params'][device_type]['writePulseWidthLTD'] = params['twidth']
+            config['device-params'][device_type]['NL'] = params['NL'] # this is not used if nonlinearIV = False
+            config['device-params'][device_type]['nonIdenticalPulse']['enabled'] = True
+            config['device-params'][device_type]['nonIdenticalPulse']['VinitLTP'] = params['VStartNeg']
+            config['device-params'][device_type]['nonIdenticalPulse']['VstepLTP'] = params['stepSizeLTP']
+            config['device-params'][device_type]['nonIdenticalPulse']['VinitLTD'] = params['VStartPos']
+            config['device-params'][device_type]['nonIdenticalPulse']['VstepLTD'] = params['stepSizeLTD']
+            config['device-params'][device_type]['nonIdenticalPulse']['PWinitLTP'] = params['twidth']
+            config['device-params'][device_type]['nonIdenticalPulse']['PWinitLTD'] = params['twidth']
+            config['device-params'][device_type]['nonIdenticalPulse']['PWstepLTP'] = 0
+            config['device-params'][device_type]['nonIdenticalPulse']['PWstepLTD'] = 0
+            config['device-params'][device_type]['rawDataConductanceLTP'] = list(np.flip(1./meas_data[kpos,3][0]))
+            config['device-params'][device_type]['rawDataConductanceLTD'] = list(np.flip(1./meas_data[kneg,3][0]))
+
     if filename is None:
         print(json.dumps(config, indent=4))
     else:
@@ -388,7 +408,7 @@ if __name__ == '__main__':
 
     parser.add_argument('filename', type=str, help='Path to the input file')
     parser.add_argument('--plotmode', type=str, choices=['noplot', 'plot', 'saveplot'], default='plot', help='Plot mode')
-    parser.add_argument('--device', type=str, choices=['RealDevice', 'DigitalNVM'], default='RealDevice', help='Device type')
+    parser.add_argument('--device', type=str, choices=['RealDevice', 'MeasuredDevice', 'DigitalNVM'], default='RealDevice', help='Device type')
     parser.add_argument('--dest', type=str, help='Destination folder for the results')
     parser.add_argument('--configref', type=str, help='Reference configuration file')
     parser.add_argument('--summary', dest='savesummary', action='store_true', help='Save summary file')
@@ -433,25 +453,6 @@ if __name__ == '__main__':
     # get on/off ratio
     onOffRatio = max(meas_data[kpos,3][0]) / min(meas_data[kpos,3][0])
 
-    # write results to file
-    if args.savesummary:
-        allResults_filename = os.path.join(results_folder, os.path.basename(filename.replace('.csv', '_Summary.dat')))
-        with open(allResults_filename, 'w') as f:
-            f.write(','.join(list(metadata.keys())) + '\n')
-            f.write(','.join(list(metadata.values())) + '\n')
-            f.write(','.join(list(meas_params.keys())) + '\n')
-            f.write(','.join([str(x) for x in list(meas_params.values())]) + '\n')
-
-            f.write(f"VStartPos (V),VEndPos (V),VStartNeg (V),VEndNeg (V),twidth (s),onOffRatio\n")
-            f.write(f"{VStartPos},{VEndPos},{VStartNeg},{VEndNeg},{twidth},{onOffRatio}\n")
-            
-            f.write("Pulse Number,index,Pulse Amplitude (V),R_low (ohm),R_high (ohm)\n")
-            for i, (index, pulse_amplitude, R_low, R_high) in enumerate(np.vstack((meas_data[kpos,:][0], meas_data[kneg,:][0]))):
-                f.write(f"{i+1},{int(index)},{pulse_amplitude},{R_low},{R_high}\n")
-
-        print("Summary file written to", allResults_filename)
-
-
     exp_LTD_raw = np.flip(1. / meas_data[kpos,3][0])
     exp_LTP_raw = 1. / meas_data[kneg,3][0]
     pulse_num_LTD_raw = np.linspace(0, len(exp_LTD_raw) - 1, len(exp_LTD_raw))
@@ -473,6 +474,24 @@ if __name__ == '__main__':
     if args.verbose:
         print(f"Best fit nonlinearity label for LTP: {best_NL_LTP:.2f}")
         print(f"Best fit nonlinearity label for LTD: {best_NL_LTD:.2f}")
+
+    # write results to file
+    if args.savesummary:
+        allResults_filename = os.path.join(results_folder, os.path.basename(filename.replace('.csv', '_Summary.dat')))
+        with open(allResults_filename, 'w') as f:
+            f.write(','.join(list(metadata.keys())) + '\n')
+            f.write(','.join(list(metadata.values())) + '\n')
+            f.write(','.join(list(meas_params.keys())) + '\n')
+            f.write(','.join([str(x) for x in list(meas_params.values())]) + '\n')
+
+            f.write(f"VStartPos (V),VEndPos (V),VStartNeg (V),VEndNeg (V),twidth (s),onOffRatio,A_LTP,A_LTD,num_LTP,num_LTD\n")
+            f.write(f"{VStartPos},{VEndPos},{VStartNeg},{VEndNeg},{twidth},{onOffRatio},{best_A_LTP},{best_A_LTD},{len(kneg[0])},{len(kpos[0])}\n")
+            
+            f.write("Pulse Number,index,Pulse Amplitude (V),R_low (ohm),R_high (ohm)\n")
+            for i, (index, pulse_amplitude, R_low, R_high) in enumerate(np.vstack((meas_data[kpos,:][0], meas_data[kneg,:][0]))):
+                f.write(f"{i+1},{int(index)},{pulse_amplitude},{R_low},{R_high}\n")
+
+        print("Summary file written to", allResults_filename)
 
     params = {
         'readVoltage': 0.1,
