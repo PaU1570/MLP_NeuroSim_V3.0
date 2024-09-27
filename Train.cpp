@@ -93,9 +93,9 @@ extern double totalNumPulse=0;// track the total number of pulse for the weight 
 
 /*Optimization functions*/
 double gradt;
-double GAMA=param->gamma;
-double BETA1=param->beta1;
-double BETA2=param->beta2; 
+double GAMA=0.3;
+double BETA1=0.9;
+double BETA2=0.9; 
 double SGD(double gradient, double learning_rate);
 double Momentum(double gradient, double learning_rate, double momentumPrev, double GAMA=0.3);
 double Adagrad(double gradient, double learning_rate, double gradSquare, double EPSILON=1E-2);
@@ -106,22 +106,27 @@ void WeightTransfer(void);
 void TransferEnergyLatencyCalculation(Array* array, SubArray* subArray);
 
 void Train(const int numTrain, const int epochs, std::string optimization_type) {
-int numBatchReadSynapse;	    // # of read synapses in a batch read operation (decide later)
-int numBatchWriteSynapse;	// # of write synapses in a batch write operation (decide later)
-double outN1[param->nHide]; // Net input to the hidden layer [param->nHide]
-double a1[param->nHide];    // Net output of hidden layer [param->nHide] also the input of hidden layer to output layer
-                                // the value after the activation function
-                                // also the input of hidden layer to output layer
-int da1[param->nHide];  // Digitized net output of hidden layer [param->nHide] also the input of hidden layer to output layer
-double outN2[param->nOutput];   // Net input to the output layer [param->nOutput]
-double a2[param->nOutput];  // Net output of output layer [param->nOutput]
 
-double s1[param->nHide];    // Output delta from input layer to the hidden layer [param->nHide]
-double s2[param->nOutput];  // Output delta from hidden layer to the output layer [param->nOutput]
+	GAMA=param->gamma;
+	BETA1=param->beta1;
+	BETA2=param->beta2; 
 
-int train_batchsize = param -> numTrainImagesPerBatch;
+	int numBatchReadSynapse;	    // # of read synapses in a batch read operation (decide later)
+	int numBatchWriteSynapse;	// # of write synapses in a batch write operation (decide later)
+	double outN1[param->nHide]; // Net input to the hidden layer [param->nHide]
+	double a1[param->nHide];    // Net output of hidden layer [param->nHide] also the input of hidden layer to output layer
+									// the value after the activation function
+									// also the input of hidden layer to output layer
+	int da1[param->nHide];  // Digitized net output of hidden layer [param->nHide] also the input of hidden layer to output layer
+	double outN2[param->nOutput];   // Net input to the output layer [param->nOutput]
+	double a2[param->nOutput];  // Net output of output layer [param->nOutput]
 
-	
+	double s1[param->nHide];    // Output delta from input layer to the hidden layer [param->nHide]
+	double s2[param->nOutput];  // Output delta from hidden layer to the output layer [param->nOutput]
+
+
+	int train_batchsize = param -> numTrainImagesPerBatch;
+
 	for (int t = 0; t < epochs; t++) {
 		for (int batchSize = 0; batchSize < numTrain; batchSize++) {
 			int i = rand() % param->numMnistTrainImages;  // Randomize sample
