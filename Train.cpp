@@ -93,8 +93,9 @@ extern double totalNumPulse=0;// track the total number of pulse for the weight 
 
 /*Optimization functions*/
 double gradt;
-double GAMA=0.3;
-double BETA1= 0.9, BETA2=0.9; 
+double GAMA=param->gamma;
+double BETA1=param->beta1;
+double BETA2=param->beta2; 
 double SGD(double gradient, double learning_rate);
 double Momentum(double gradient, double learning_rate, double momentumPrev, double GAMA=0.3);
 double Adagrad(double gradient, double learning_rate, double gradSquare, double EPSILON=1E-2);
@@ -574,17 +575,17 @@ int train_batchsize = param -> numTrainImagesPerBatch;
                                 if (optimization_type=="Momentum")
                                 {
                                     gradSum1[jj][k] *= train_batchsize;
-                                    deltaWeight1[jj][k] = Momentum(gradSum1[jj][k], param->alpha1,momentumPrev1[jj][k]);
+                                    deltaWeight1[jj][k] = Momentum(gradSum1[jj][k], param->alpha1,momentumPrev1[jj][k], GAMA);
                                     momentumPrev1[jj][k] = GAMA*momentumPrev1[jj][k]+(1-GAMA)*gradSum1[jj][k];
                                 }
                                 else if(optimization_type=="RMSprop")
                                 {
-                                    deltaWeight1[jj][k] = RMSprop(gradSum1[jj][k], param->alpha1, gradSquarePrev1[jj][k]);                                
+                                    deltaWeight1[jj][k] = RMSprop(gradSum1[jj][k], param->alpha1, gradSquarePrev1[jj][k], GAMA);                                
                                     gradSquarePrev1[jj][k] = GAMA*gradSquarePrev1[jj][k]+(1-GAMA)*pow(gradSum1[jj][k], 2);   
                                 }
                                 else if(optimization_type == "Adam")
                                 {
-                                    deltaWeight1[jj][k] = Adam(gradSum1[jj][k], param->alpha1, momentumPrev1[jj][k], gradSquarePrev1[jj][k],(batchSize+1)/train_batchsize);
+                                    deltaWeight1[jj][k] = Adam(gradSum1[jj][k], param->alpha1, momentumPrev1[jj][k], gradSquarePrev1[jj][k], (batchSize+1)/train_batchsize, BETA1, BETA2);
                                     momentumPrev1[jj][k] = BETA1*momentumPrev1[jj][k]+(1-BETA1)*gradSum1[jj][k];
                                     gradSquarePrev1[jj][k] = BETA2*gradSquarePrev1[jj][k]+(1-BETA2)*pow(gradSum1[jj][k], 2);
                                 }
@@ -915,17 +916,17 @@ int train_batchsize = param -> numTrainImagesPerBatch;
                             if(optimization_type=="Momentum")
                             {
                                 gradSum2[jj][k] *= train_batchsize;
-                                deltaWeight2[jj][k] = Momentum(gradSum2[jj][k], param->alpha2,momentumPrev2[jj][k]);
+                                deltaWeight2[jj][k] = Momentum(gradSum2[jj][k], param->alpha2,momentumPrev2[jj][k], GAMA);
                                 momentumPrev2[jj][k] = GAMA*momentumPrev2[jj][k]+(1-GAMA)*gradSum2[jj][k];
                             }
                             else if(optimization_type=="RMSprop")
                             {
-                                deltaWeight2[jj][k] = RMSprop(gradSum2[jj][k], param->alpha2, gradSquarePrev2[jj][k]);
+                                deltaWeight2[jj][k] = RMSprop(gradSum2[jj][k], param->alpha2, gradSquarePrev2[jj][k], GAMA);
                                 gradSquarePrev2[jj][k] = GAMA*gradSquarePrev2[jj][k]+(1-GAMA)*pow(gradSum2[jj][k], 2);
                             }
                             else if(optimization_type == "Adam")
                             {
-                                deltaWeight2[jj][k] = Adam(gradSum2[jj][k], param->alpha2, momentumPrev2[jj][k], gradSquarePrev2[jj][k],(batchSize+1)/train_batchsize);
+                                deltaWeight2[jj][k] = Adam(gradSum2[jj][k], param->alpha2, momentumPrev2[jj][k], gradSquarePrev2[jj][k],(batchSize+1)/train_batchsize, BETA1, BETA2);
                                 momentumPrev2[jj][k] = BETA1*momentumPrev2[jj][k]+(1-BETA1)*gradSum2[jj][k];
                                 gradSquarePrev2[jj][k] = BETA2*gradSquarePrev2[jj][k]+(1-BETA2)*pow(gradSum2[jj][k], 2);
                             }

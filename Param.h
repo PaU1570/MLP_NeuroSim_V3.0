@@ -66,6 +66,9 @@ public:
 	int nOutput;	// # of neurons in output layer
 	double alpha1;		// Learning rate for the synapses from input to hidden layer
 	double alpha2;		// Learning rate for the synapses from hidden to output layer
+	double beta1;		// Beta1 for Adam
+	double beta2;		// Beta2 for Adam
+	double gamma;		// Gamma for momentum and RMSprop
 	double maxWeight;	// Upper bound of weight value
 	double minWeight;	// Lower bound of weight value
     std::string optimization_type;

@@ -57,6 +57,9 @@ Param::Param() {
 	nOutput = 10;     // # of neurons in output layer
 	alpha1 = 0.4;	// Learning rate for the weights from input to hidden layer
 	alpha2 = 0.2;	// Learning rate for the weights from hidden to output layer
+	beta1 = 0.9;	// Decay rate for the first moment estimate in Adam
+	beta2 = 0.9;	// Decay rate for the second moment estimate in Adam
+	gamma = 0.3;	// Gamma for momentum and RMSprop
 	maxWeight = 1;	// Upper bound of weight value
 	minWeight = -1;	// Lower bound of weight value
 	/*Optimization method 
@@ -108,6 +111,9 @@ void Param::read_config(json* config) {
 	nOutput = p->at("algorithm").value("nOutput", 10);     // # of neurons in output layer
 	alpha1 = p->at("algorithm").value("alpha1", 0.4);	// Learning rate for the weights from input to hidden layer
 	alpha2 = p->at("algorithm").value("alpha2", 0.2);	// Learning rate for the weights from hidden to output layer
+	beta1 = p->at("algorithm").value("beta1", 0.9);	// Decay rate for the first moment estimate in Adam
+	beta2 = p->at("algorithm").value("beta2", 0.9);	// Decay rate for the second moment estimate in Adam
+	gamma = p->at("algorithm").value("gamma", 0.3);	// Gamma for momentum and RMSprop
 	maxWeight = p->at("algorithm").value("maxWeight", 1);	// Upper bound of weight value
 	minWeight = p->at("algorithm").value("minWeight", -1);	// Lower bound of weight value
 	/*Optimization method 
