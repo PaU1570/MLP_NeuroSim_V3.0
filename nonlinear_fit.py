@@ -413,6 +413,7 @@ if __name__ == '__main__':
     parser.add_argument('--configref', type=str, help='Reference configuration file')
     parser.add_argument('--summary', dest='savesummary', action='store_true', help='Save summary file')
     parser.add_argument('--verbose', dest='verbose', action='store_true', help='Verbose mode')
+    parser.add_argument('--absvolt', dest='absvolt', action='store_true', help='Use absolute voltage values')
 
     args = parser.parse_args()
     filename = args.filename
@@ -496,11 +497,11 @@ if __name__ == '__main__':
     params = {
         'readVoltage': 0.1,
         'twidth': twidth,
-        'VStartNeg': VStartNeg,
-        'VEndNeg': VEndNeg,
-        'VStartPos': VStartPos,
-        'VEndPos': VEndPos,
-        'stepSizeLTP': -stepSize,
+        'VStartNeg': abs(VStartNeg) if args.absvolt else VStartNeg,
+        'VEndNeg': abs(VEndNeg) if args.absvolt else VEndNeg,
+        'VStartPos': abs(VStartPos) if args.absvolt else VStartPos,
+        'VEndPos': abs(VEndPos) if args.absvolt else VEndPos,
+        'stepSizeLTP': stepSize if args.absvolt else -stepSize,
         'stepSizeLTD': stepSize,
         'NL': 40,
         'best_NL_LTP': best_NL_LTP,
