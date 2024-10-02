@@ -87,6 +87,8 @@ def nonlinear_fit(pulse_num_LTP, exp_LTP, pulse_num_LTD, exp_LTD, plotmode = 1, 
     Returns:
         best_A_LTP: (float) Best fit parameter A for LTP
         best_A_LTD: (float) Best fit parameter A for LTD
+        r_squared_LTP: (float) R^2 value for LTP fit
+        r_squared_LTD: (float) R^2 value for LTD fit
     """
 
     # fit LTP
@@ -128,7 +130,7 @@ def nonlinear_fit(pulse_num_LTP, exp_LTP, pulse_num_LTD, exp_LTD, plotmode = 1, 
             plt.savefig(filename)
             print(f'Plot saved as {filename}')
 
-    return best_A_LTP, best_A_LTD
+    return best_A_LTP, best_A_LTD, r_squared_LTP, r_squared_LTD
 
 def map_A_to_NL(A):
     """
@@ -465,7 +467,7 @@ if __name__ == '__main__':
     pulse_num_LTP_norm = pulse_num_LTP_raw / max(pulse_num_LTP_raw)
 
     plot_filename = os.path.join(results_folder, os.path.basename(filename.replace('.csv', '_fit.png')))
-    best_A_LTP, best_A_LTD = nonlinear_fit(pulse_num_LTP_norm, exp_LTP_norm, pulse_num_LTD_norm, exp_LTD_norm, plotmode=plotmode, filename=plot_filename)
+    best_A_LTP, best_A_LTD, r_squared_LTP, r_squared_LTD = nonlinear_fit(pulse_num_LTP_norm, exp_LTP_norm, pulse_num_LTD_norm, exp_LTD_norm, plotmode=plotmode, filename=plot_filename)
     if args.verbose:
         print(f"Best fit parameter A for LTP: {best_A_LTP:.3f}")
         print(f"Best fit parameter A for LTD: {best_A_LTD:.3f}")
@@ -485,8 +487,8 @@ if __name__ == '__main__':
             f.write(','.join(list(meas_params.keys())) + '\n')
             f.write(','.join([str(x) for x in list(meas_params.values())]) + '\n')
 
-            f.write(f"VStartPos (V),VEndPos (V),VStartNeg (V),VEndNeg (V),twidth (s),onOffRatio,A_LTP,A_LTD,num_LTP,num_LTD\n")
-            f.write(f"{VStartPos},{VEndPos},{VStartNeg},{VEndNeg},{twidth},{onOffRatio},{best_A_LTP},{best_A_LTD},{len(kneg[0])},{len(kpos[0])}\n")
+            f.write(f"VStartPos (V),VEndPos (V),VStartNeg (V),VEndNeg (V),twidth (s),onOffRatio,A_LTP,A_LTD,num_LTP,num_LTD,fit_R2_LTP,fit_R2_LTD\n")
+            f.write(f"{VStartPos},{VEndPos},{VStartNeg},{VEndNeg},{twidth},{onOffRatio},{best_A_LTP},{best_A_LTD},{len(kneg[0])},{len(kpos[0])},{r_squared_LTP},{r_squared_LTD}\n")
             
             f.write("Pulse Number,index,Pulse Amplitude (V),R_low (ohm),R_high (ohm)\n")
             for i, (index, pulse_amplitude, R_low, R_high) in enumerate(np.vstack((meas_data[kpos,:][0], meas_data[kneg,:][0]))):
