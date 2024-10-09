@@ -440,16 +440,30 @@ if __name__ == '__main__':
         for key, value in meas_params.items():
             print(f"{key}: {value}")
 
-    VStartPos = max(0.1, meas_params['startVolage1']) # (sic)
-    VEndPos = min(4.1, meas_params['endVoltage1'])
-    VStartNeg = min(0, meas_params['startVolage2']) # (sic)
-    VEndNeg = max(-1.4, meas_params['endVoltage2'])
+    VStartPos = max(0.6, meas_params['startVolage1']) # (sic)
+    VEndPos = min(5, meas_params['endVoltage1'])
+    VStartNeg = min(-0.6, meas_params['startVolage2']) # (sic)
+    VEndNeg = max(-3, meas_params['endVoltage2'])
     stepSize = meas_params['stepSize']
     twidth = meas_params['pulseWidth']
 
-    kpos = np.where((meas_data[:,1] > VStartPos) & (meas_data[:,1] < VEndPos))
-    kneg = np.where((meas_data[:,1] < VStartNeg) & (meas_data[:,1] > VEndNeg))
-
+    # keep only positive sequence of increasing voltage and negative sequence of decreasing voltage
+    kpos = []
+    kneg = []
+    vprev = None
+    for i, v in enumerate(meas_data[:,1]):
+        if vprev is not None:
+            if v > 0 and v > vprev and v > VStartPos and v < VEndPos:
+                kpos.append(i)
+            elif v < 0 and v < vprev and v < VStartNeg and v > VEndNeg:
+                kneg.append(i)
+        vprev = v
+    kpos = np.array([kpos])
+    kneg = np.array([kneg])
+        
+    #kpos = np.where((meas_data[:,1] > VStartPos) & (meas_data[:,1] < VEndPos))
+    #kneg = np.where((meas_data[:,1] < VStartNeg) & (meas_data[:,1] > VEndNeg))
+    
     if plotmode == 1:
         plot_1(meas_data, kpos, kneg)
 
