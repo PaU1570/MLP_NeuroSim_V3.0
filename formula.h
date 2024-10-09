@@ -52,5 +52,7 @@ double InvMeasuredLTP(double conductance, int maxNumLevel, std::vector<double>& 
 double InvMeasuredLTD(double conductance, int maxNumLevel, std::vector<double>& dataConductanceLTD);
 double getParamA(double NL);
 double NonlinearConductance(double C, double NL, double Vw, double Vr, double V);
+double LogisticNonlinearWeight(double xPulse, double L, double k, double x0, double minConductance);
+double InvLogisticNonlinearWeight(double conductance, double L, double k, double x0, double minConductance);
 
 #endif

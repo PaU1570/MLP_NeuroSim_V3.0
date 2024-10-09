@@ -277,7 +277,7 @@ RealDevice::RealDevice(int x, int y, json* config) {
 	writeVoltageLTD = rd->value("writeVoltageLTD", 2.8);	// Write voltage (V) for LTD or weight decrease
 	writePulseWidthLTP = rd->value("writePulseWidthLTP", 300e-6);	// Write pulse width (s) for LTP or weight increase
 	writePulseWidthLTD = rd->value("writePulseWidthLTD", 300e-6);	// Write pulse width (s) for LTD or weight decrease
-	writeEnergy = rd->value("writeEnergy", 0);	// Dynamic variable for calculation of write energy (J)
+	writeEnergy = 0;	// Dynamic variable for calculation of write energy (J)
 	maxNumLevelLTP = rd->value("maxNumLevelLTP", 97);	// Maximum number of conductance states during LTP or weight increase
 	maxNumLevelLTD = rd->value("maxNumLevelLTD", 100);	// Maximum number of conductance states during LTD or weight decrease
 	numPulse = 0;	// Number of write pulses used in the most recent write operation (dynamic variable)
@@ -448,6 +448,192 @@ void RealDevice::Write(double deltaWeightNormalized, double weight, double minWe
 	conductance = conductanceNew;
 }
 
+/* Real Logistic Device */
+RealLogisticDevice::RealLogisticDevice(int x, int y, json* config) { 
+	this->x = x; this->y = y;	// Cell location: x (column) and y (row) start from index 0
+
+	json* rld = &(config->at("device-params").at("RealLogisticDevice"));
+
+	maxConductance = rld->value("maxConductance", 3.8462e-8);		// Maximum cell conductance (S)
+	minConductance = rld->value("minConductance", 3.0769e-9);	// Minimum cell conductance (S)
+	avgMaxConductance = rld->value("maxConductance", maxConductance); // Average maximum cell conductance (S)
+	avgMinConductance = rld->value("minConductance", minConductance); // Average minimum cell conductance (S)
+	conductance = minConductance;	// Current conductance (S) (dynamic variable)
+	conductancePrev = conductance;	// Previous conductance (S) (dynamic variable)
+	readVoltage = rld->value("readVoltage", 0.5);	// On-chip read voltage (Vr) (V)
+	readPulseWidth = rld->value("readPulseWidth", 5e-9);	// Read pulse width (s) (will be determined by ADC)
+	writeVoltageLTP = rld->value("writeVoltageLTP", 3.2);	// Write voltage (V) for LTP or weight increase
+	writeVoltageLTD = rld->value("writeVoltageLTD", 2.8);	// Write voltage (V) for LTD or weight decrease
+	writePulseWidthLTP = rld->value("writePulseWidthLTP", 300e-6);	// Write pulse width (s) for LTP or weight increase
+	writePulseWidthLTD = rld->value("writePulseWidthLTD", 300e-6);	// Write pulse width (s) for LTD or weight decrease
+	writeEnergy = 0;	// Dynamic variable for calculation of write energy (J)
+	maxNumLevelLTP = rld->value("maxNumLevelLTP", 97);	// Maximum number of conductance states during LTP or weight increase
+	maxNumLevelLTD = rld->value("maxNumLevelLTD", 100);	// Maximum number of conductance states during LTD or weight decrease
+	numPulse = 0;	// Number of write pulses used in the most recent write operation (dynamic variable)
+	cmosAccess = rld->value("cmosAccess", true);	// True: Pseudo-crossbar (1T1R), false: cross-point
+    FeFET = rld->value("FeFET", false);		// True: FeFET structure (Pseudo-crossbar only, should be cmosAccess=1)
+	gateCapFeFET = rld->value("gateCapFeFET", 2.1717e-18);	// Gate capacitance of FeFET (F)
+	resistanceAccess = rld->value("resistanceAccess", 15e3);	// The resistance of transistor (Ohm) in Pseudo-crossbar array when turned ON
+	nonlinearIV = rld->value("nonlinearIV", false);	// Consider I-V nonlinearity or not (Currently for cross-point array only)
+	NL = rld->value("NL", 10);    // I-V nonlinearity in write scheme (the current ratio between Vw and Vw/2), assuming for the LTP side
+	if (nonlinearIV) {  // Currently for cross-point array only
+		double Vr_exp = rld->value("Vr_exp", readVoltage);  // XXX: Modify this value to Vr in the reported measurement data (can be different than readVoltage)
+		// Calculation of conductance at on-chip Vr
+		maxConductance = NonlinearConductance(maxConductance, NL, writeVoltageLTP, Vr_exp, readVoltage);
+		minConductance = NonlinearConductance(minConductance, NL, writeVoltageLTP, Vr_exp, readVoltage);
+	}
+	nonIdenticalPulse = rld->at("nonIdenticalPulse").value("enabled", false);	// Use non-identical pulse scheme in weight update or not
+	if (nonIdenticalPulse) {
+		VinitLTP = rld->at("nonIdenticalPulse").value("VinitLTP", 2.85);	// Initial write voltage for LTP or weight increase (V)
+		VstepLTP = rld->at("nonIdenticalPulse").value("VstepLTP", 0.05);	// Write voltage step for LTP or weight increase (V)
+		VinitLTD = rld->at("nonIdenticalPulse").value("VinitLTD", 2.1);		// Initial write voltage for LTD or weight decrease (V)
+		VstepLTD = rld->at("nonIdenticalPulse").value("VstepLTD", 0.05); 	// Write voltage step for LTD or weight decrease (V)
+		PWinitLTP = rld->at("nonIdenticalPulse").value("PWinitLTP", 75e-9);	// Initial write pulse width for LTP or weight increase (s)
+		PWstepLTP = rld->at("nonIdenticalPulse").value("PWstepLTP", 5e-9);	// Write pulse width for LTP or weight increase (s)
+		PWinitLTD = rld->at("nonIdenticalPulse").value("PWinitLTD", 75e-9);	// Initial write pulse width for LTD or weight decrease (s)
+		PWstepLTD = rld->at("nonIdenticalPulse").value("PWstepLTD", 5e-9);	// Write pulse width for LTD or weight decrease (s)
+		writeVoltageSquareSum = 0;	// Sum of V^2 of non-identical pulses (dynamic variable)
+	}
+	readNoise = rld->value("readNoise", false);		// Consider read noise or not
+	sigmaReadNoise = rld->value("sigmaReadNoise", 0);		// Sigma of read noise in gaussian distribution
+	gaussian_dist = new std::normal_distribution<double>(0, sigmaReadNoise);	// Set up mean and stddev for read noise
+
+	std::mt19937 localGen;	// It's OK not to use the external gen, since here the device-to-device vairation is a one-time deal
+	localGen.seed(std::time(0));
+	
+	/* Device-to-device weight update variation */
+	sigmaDtoD = rld->at("weightUpdateVariationParams").value("sigmaDtoD", 0);	// Sigma of device-to-device weight update vairation in gaussian distribution
+	gaussian_dist2 = new std::normal_distribution<double>(0, sigmaDtoD);	// Set up mean and stddev for device-to-device weight update vairation
+	param_L_LTP = rld->at("weightUpdateVariationParams").value("L_LTP", 1);	// Parameter L for LTP nonlinearity
+	param_k_LTP = rld->at("weightUpdateVariationParams").value("k_LTP", 10);	// Parameter k for LTP nonlinearity
+	param_x0_LTP = rld->at("weightUpdateVariationParams").value("x0_LTP", 0.5);	// Parameter x0 for LTP nonlinearity
+	param_L_LTD = rld->at("weightUpdateVariationParams").value("L_LTD", 1);	// Parameter L for LTD nonlinearity
+	param_k_LTD = rld->at("weightUpdateVariationParams").value("k_LTD", 10);	// Parameter k for LTD nonlinearity
+	param_x0_LTD = rld->at("weightUpdateVariationParams").value("x0_LTD", 0.5);	// Parameter x0 for LTD nonlinearity
+	
+	// scale parameters
+	param_L_LTP *= (maxConductance - minConductance);
+	param_L_LTD *= (maxConductance - minConductance);
+	param_k_LTP = (param_k_LTP + (*gaussian_dist2)(localGen)) / maxNumLevelLTP;
+	param_k_LTD = (param_k_LTD + (*gaussian_dist2)(localGen)) / maxNumLevelLTD;
+	param_x0_LTP *= maxNumLevelLTP;
+	param_x0_LTD *= maxNumLevelLTD;
+	
+	/* Cycle-to-cycle weight update variation */
+	sigmaCtoC = rld->at("weightUpdateVariationParams").value("sigmaCtoC", 0.035) * (maxConductance - minConductance);	// Sigma of cycle-to-cycle weight update vairation: defined as the percentage of conductance range
+	gaussian_dist3 = new std::normal_distribution<double>(0, sigmaCtoC);    // Set up mean and stddev for cycle-to-cycle weight update vairation
+
+	/* Conductance range variation */
+	conductanceRangeVar = rld->at("conductanceRangeVar").value("enabled", false);    // Consider variation of conductance range or not
+	maxConductanceVar = rld->at("conductanceRangeVar").value("maxConductanceVar", 0);  // Sigma of maxConductance variation (S)
+	minConductanceVar = rld->at("conductanceRangeVar").value("minConductanceVar", 0);  // Sigma of minConductance variation (S)
+	gaussian_dist_maxConductance = new std::normal_distribution<double>(0, maxConductanceVar);
+	gaussian_dist_minConductance = new std::normal_distribution<double>(0, minConductanceVar);
+	if (conductanceRangeVar) {
+		maxConductance += (*gaussian_dist_maxConductance)(localGen);
+		minConductance += (*gaussian_dist_minConductance)(localGen);
+		if (minConductance >= maxConductance || maxConductance < 0 || minConductance < 0 ) {    // Conductance variation check
+			puts("[Error] Conductance variation check not passed. The variation may be too large.");
+			exit(-1);
+		}
+		// Use the code below instead for re-choosing the variation if the check is not passed
+		//do {
+		//  maxConductance = avgMaxConductance + (*gaussian_dist_maxConductance)(localGen);
+		//  minConductance = avgMinConductance + (*gaussian_dist_minConductance)(localGen);
+		//} while (minConductance >= maxConductance || maxConductance < 0 || minConductance < 0);
+	}
+
+	json* h = &(rld->at("heightInFeatureSize"));
+	json* w = &(rld->at("widthInFeatureSize"));
+    heightInFeatureSize = cmosAccess? h->value("pseudo-crossbar", 4) : h->value("cross-point", 2); // Cell height = 4F (Pseudo-crossbar) or 2F (cross-point)
+    widthInFeatureSize = cmosAccess? (FeFET? w->value("FeFET", 6) : w->value("pseudo-crossbar", 4)) : w->value("cross-point", 2); // Cell width = 6F (FeFET) or 4F (Pseudo-crossbar) or 2F (cross-point)
+
+}
+ 
+double RealLogisticDevice::Read(double voltage) {	// Return read current (A)
+	extern std::mt19937 gen;
+	if (nonlinearIV) {
+		// TODO: nonlinear read
+		if (readNoise) {
+			return voltage * conductance * (1 + (*gaussian_dist)(gen));
+		} else {
+			return voltage * conductance;
+		}
+	} else {
+		if (readNoise) {
+			return voltage * conductance * (1 + (*gaussian_dist)(gen));
+		} else {
+			return voltage * conductance;
+		}
+	}
+}
+
+void RealLogisticDevice::Write(double deltaWeightNormalized, double weight, double minWeight, double maxWeight) {
+	double conductanceNew = conductance;	// =conductance if no update
+	if (deltaWeightNormalized > 0) {	// LTP
+		deltaWeightNormalized = deltaWeightNormalized/(maxWeight-minWeight);
+		deltaWeightNormalized = truncate(deltaWeightNormalized, maxNumLevelLTP);
+		numPulse = deltaWeightNormalized * maxNumLevelLTP;
+		xPulse = InvLogisticNonlinearWeight(conductance, param_L_LTP, param_k_LTP, param_x0_LTP, minConductance);
+		conductanceNew = LogisticNonlinearWeight(xPulse+numPulse, param_L_LTP, param_k_LTP, param_x0_LTP, minConductance);
+	} else {	// LTD
+		deltaWeightNormalized = deltaWeightNormalized/(maxWeight-minWeight);
+		deltaWeightNormalized = truncate(deltaWeightNormalized, maxNumLevelLTD);
+		numPulse = deltaWeightNormalized * maxNumLevelLTD;
+		xPulse = InvLogisticNonlinearWeight(conductance, param_L_LTD, param_k_LTD, param_x0_LTD, minConductance);
+		conductanceNew = LogisticNonlinearWeight(xPulse+numPulse, param_L_LTD, param_k_LTD, param_x0_LTD, minConductance);
+	}
+
+	/* Cycle-to-cycle variation */
+	extern std::mt19937 gen;
+	if (sigmaCtoC && numPulse != 0) {
+		conductanceNew += (*gaussian_dist3)(gen) * sqrt(abs(numPulse));	// Absolute variation
+	}
+	
+	if (conductanceNew > maxConductance) {
+		conductanceNew = maxConductance;
+	} else if (conductanceNew < minConductance) {
+		conductanceNew = minConductance;
+	}
+
+	/* Write latency calculation */
+	if (!nonIdenticalPulse) {	// Identical write pulse scheme
+		if (numPulse > 0) { // LTP
+			writeLatencyLTP = numPulse * writePulseWidthLTP;
+			writeLatencyLTD = 0;
+		} else {    // LTD
+			writeLatencyLTP = 0;
+			writeLatencyLTD = -numPulse * writePulseWidthLTD;
+		}
+	} else {	// Non-identical write pulse scheme
+		writeLatencyLTP = 0;
+		writeLatencyLTD = 0;
+		writeVoltageSquareSum = 0;
+		double V = 0;
+		double PW = 0;
+		if (numPulse > 0) { // LTP
+			for (int i=0; i<numPulse; i++) {
+				V = VinitLTP + (xPulse+i) * VstepLTP;
+				PW = PWinitLTP + (xPulse+i) * PWstepLTP;
+				writeLatencyLTP += PW;
+				writeVoltageSquareSum += V * V;
+			}
+			writePulseWidthLTP = writeLatencyLTP / numPulse;
+		} else {    // LTD
+			for (int i=0; i<(-numPulse); i++) {
+				V = VinitLTD + (maxNumLevelLTD-xPulse+i) * VstepLTD;
+				PW = PWinitLTD + (maxNumLevelLTD-xPulse+i) * PWstepLTD;
+				writeLatencyLTD += PW;
+				writeVoltageSquareSum += V * V;
+			}
+			writePulseWidthLTD = writeLatencyLTD / (-numPulse);
+		}
+	}
+	
+	conductancePrev = conductance;
+	conductance = conductanceNew;
+}
+
 /* Measured device */
 MeasuredDevice::MeasuredDevice(int x, int y, json* config) {
 	this->x = x; this->y = y;	// Cell location: x (column) and y (row) start from index 0
@@ -460,7 +646,7 @@ MeasuredDevice::MeasuredDevice(int x, int y, json* config) {
 	writeVoltageLTD = md->value("writeVoltageLTD", 2.0);	// Write voltage (V) for LTD or weight decrease
 	writePulseWidthLTP = md->value("writePulseWidthLTP", 100e-9);	// Write pulse width (s) for LTP or weight increase
 	writePulseWidthLTD = md->value("writePulseWidthLTD", 100e-9);	// Write pulse width (s) for LTD or weight decrease
-	writeEnergy = md->value("writeEnergy", 0.0);	// Dynamic variable for calculation of write energy (J)
+	writeEnergy = 0;	// Dynamic variable for calculation of write energy (J)
 	numPulse = 0;	// Number of write pulses used in the most recent write operation (dynamic variable)
 	cmosAccess = md->value("cmosAccess", true);	// True: Pseudo-crossbar (1T1R), false: cross-point
 	FeFET = md->value("FeFET", false);	// True: FeFET structure (Pseudo-crossbar only, should be cmosAccess=1)
@@ -638,8 +824,8 @@ SRAM::SRAM(int x, int y, json* config) {
 	widthSRAMCellPMOS = sram->value("widthSRAMCellPMOS", 1.23);	// Pull-up PMOS width in terms of feature size (F)
 	widthAccessCMOS = sram->value("widthAccessCMOS", 1.31);		// Access transistor width in terms of feature size (F)
 	minSenseVoltage = sram->value("minSenseVoltage", 0.1);		// Minimum voltage difference (V) for sensing
-	readEnergy = sram->value("readEnergy", 0);				// Dynamic variable for calculation of read energy (J)
-	writeEnergy = sram->value("writeEnergy", 0);			// Dynamic variable for calculation of write energy (J)
+	readEnergy = 0;				// Dynamic variable for calculation of read energy (J)
+	writeEnergy = 0;			// Dynamic variable for calculation of write energy (J)
 	readEnergySRAMCell = sram->value("readEnergySRAMCell", 0);		// Read energy (J) per SRAM cell (currently not used, it is included in the peripheral circuits of SRAM array in NeuroSim)
 	writeEnergySRAMCell = sram->value("writeEnergySRAMCell", 0);	// Write energy (J) per SRAM cell (will be obtained from NeuroSim)
 	parallelRead = sram->value("parallelRead", false);
@@ -665,8 +851,8 @@ DigitalNVM::DigitalNVM(int x, int y, json* config) {
 	writeVoltageLTD = dnvm->value("writeVoltageLTD", 1);	// Write voltage (V) for LTD or weight decrease
 	writePulseWidthLTP = dnvm->value("writePulseWidthLTP", 10e-9);	// Write pulse width (s) for LTP or weight increase
 	writePulseWidthLTD = dnvm->value("writePulseWidthLTD", 10e-9);	// Write pulse width (s) for LTD or weight decrease
-	readEnergy = dnvm->value("readEnergy", 0);		// Read pulse width (s) (currently not used)
-	writeEnergy = dnvm->value("writeEnergy", 0);    // Dynamic variable for calculation of write energy (J)
+	readEnergy = 0;		// Read pulse width (s) (currently not used)
+	writeEnergy = 0;    // Dynamic variable for calculation of write energy (J)
 	cmosAccess = dnvm->value("cmosAccess", true);	// True: Pseudo-crossbar (1T1R), false: cross-point
 	isSTTMRAM = dnvm->value("isSTTMRAM", false);  // if it is STTMRAM, then, we can relax the cell area
 	parallelRead = dnvm->value("parallelRead", true); // if it is a parallel readout scheme

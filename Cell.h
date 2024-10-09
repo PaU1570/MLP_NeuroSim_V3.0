@@ -186,6 +186,23 @@ public:
 	void Write(double deltaWeightNormalized, double weight, double minWeight, double maxWeight);
 };
 
+class RealLogisticDevice: public AnalogNVM {
+public:
+	double xPulse;		// Conductance state in terms of the pulse number (doesn't need to be integer)
+	double param_L_LTP;	// Parameter L for LTP nonlinearity
+	double param_k_LTP;	// Parameter k for LTP nonlinearity
+	double param_x0_LTP;	// Parameter x0 for LTP nonlinearity
+	double param_L_LTD;	// Parameter L for LTD nonlinearity
+	double param_k_LTD;	// Parameter k for LTD nonlinearity
+	double param_x0_LTD;	// Parameter x0 for LTD nonlinearity
+	double sigmaDtoD;	// Sigma of device-to-device variation on weight update nonliearity baseline
+	double sigmaCtoC;	// Sigma of cycle-to-cycle variation on weight update
+
+	RealLogisticDevice(int x, int y, json* config);
+	double Read(double voltage);	// Return read current (A)
+	void Write(double deltaWeightNormalized, double weight, double minWeight, double maxWeight);
+};
+
 class MeasuredDevice: public AnalogNVM {
 public:
 	bool nonlinearWrite;	// Consider weight update nonlinearity or not

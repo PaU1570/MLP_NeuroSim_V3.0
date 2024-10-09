@@ -98,7 +98,11 @@ int main(int argc, char ** argv) {
 	} else if (device_type == "RealDevice") {
 		arrayIH->Initialization<RealDevice>(&config); 
 		arrayHO->Initialization<RealDevice>(&config);
-	} else if (device_type == "MeasuredDevice") {
+	} else if (device_type == "RealLogisticDevice") {
+		arrayIH->Initialization<RealLogisticDevice>(&config);
+		arrayHO->Initialization<RealLogisticDevice>(&config);
+	} 
+	else if (device_type == "MeasuredDevice") {
 		arrayIH->Initialization<MeasuredDevice>(&config);
 		arrayHO->Initialization<MeasuredDevice>(&config);
 	} else if (device_type == "SRAM") {

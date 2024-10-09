@@ -322,3 +322,12 @@ double NonlinearConductance(double C, double NL, double Vw, double Vr, double V)
 	return C_NL;
 }
 
+/* Get the conductance in the logistic nonlinear weight function given a pulse position xPulse */
+double LogisticNonlinearWeight(double xPulse, double L, double k, double x0, double minConductance) {
+	return (L / (1 + exp(-k * (xPulse - x0)))) + minConductance;
+}
+
+/* Inverse nonlinear weight function: get the pulse position based on the conductance of the logistic weight update curve */
+double InvLogisticNonlinearWeight(double conductance, double L, double k, double x0, double minConductance) {
+	return x0 - log(L/(conductance-minConductance) - 1)/k;
+}
