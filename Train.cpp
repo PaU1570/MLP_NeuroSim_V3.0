@@ -90,6 +90,8 @@ extern Subtractor subtractorHO;
 
 extern double totalWeightUpdate=0; // track the total weight update (absolute value) during the whole training process
 extern double totalNumPulse=0;// track the total number of pulse for the weight update process; for Analog device only
+extern double actualConductanceUpdate=0; // track the total actual conductance update (absolute value) during the whole training process
+extern double actualNumPulse=0; // track the total actual number of pulse for the weight update process
 
 /*Optimization functions*/
 double gradt;
@@ -620,7 +622,10 @@ void Train(const int numTrain, const int epochs, std::string optimization_type) 
                             
                             if(optimization_type == "SGD" || (batchSize+1) % train_batchsize == 0 ){
                                 if (AnalogNVM *temp = dynamic_cast<AnalogNVM*>(arrayIH->cell[jj][k])) {	// Analog eNVM
-                                    arrayIH->WriteCell(jj, k, deltaWeight1[jj][k], weight1[jj][k], param->maxWeight, param->minWeight, true);
+									double tmp_actualCondUpdate, tmp_actualNumPulse;
+                                    arrayIH->WriteCell(jj, k, deltaWeight1[jj][k], weight1[jj][k], param->maxWeight, param->minWeight, true, &tmp_actualCondUpdate, &tmp_actualNumPulse);
+									actualConductanceUpdate += tmp_actualCondUpdate;
+									actualNumPulse += tmp_actualNumPulse;
                                     weight1[jj][k] = arrayIH->ConductanceToWeight(jj, k, param->maxWeight, param->minWeight); 
                                     weightChangeBatch = weightChangeBatch || static_cast<AnalogNVM*>(arrayIH->cell[jj][k])->numPulse;
                                     if(fabs(static_cast<AnalogNVM*>(arrayIH->cell[jj][k])->numPulse) > maxPulseNum)
@@ -960,7 +965,10 @@ void Train(const int numTrain, const int epochs, std::string optimization_type) 
                             }		
                         if(optimization_type == "SGD" || (batchSize+1) % train_batchsize == 0){
 							if (AnalogNVM *temp = dynamic_cast<AnalogNVM*>(arrayHO->cell[jj][k])) { // Analog eNVM
-                                arrayHO->WriteCell(jj, k, deltaWeight2[jj][k], weight2[jj][k], param->maxWeight, param->minWeight, true);
+								double tmp_actualCondUpdate, tmp_actualNumPulse;
+                                arrayHO->WriteCell(jj, k, deltaWeight2[jj][k], weight2[jj][k], param->maxWeight, param->minWeight, true, &tmp_actualCondUpdate, &tmp_actualNumPulse);
+								actualConductanceUpdate += tmp_actualCondUpdate;
+								actualNumPulse += tmp_actualNumPulse;
 							    weight2[jj][k] = arrayHO->ConductanceToWeight(jj, k, param->maxWeight, param->minWeight);
 								weightChangeBatch = weightChangeBatch || static_cast<AnalogNVM*>(arrayHO->cell[jj][k])->numPulse;
                                 if(fabs(static_cast<AnalogNVM*>(arrayIH->cell[jj][k])->numPulse) > maxPulseNum)

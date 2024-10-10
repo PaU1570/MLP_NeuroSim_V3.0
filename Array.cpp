@@ -170,11 +170,12 @@ double Array::ReadCell(int x, int y, char* mode) {
 }
 
 void Array::WriteCell(int x, int y, double deltaWeight, double weight, double maxWeight, double minWeight, 
-						bool regular /* False: ideal write, True: regular write considering device properties */){
+						bool regular /* False: ideal write, True: regular write considering device properties */,
+						double* resDeltaWeight, double* resPulseNum /* store the actual conductance update and pulse number used */){
 	// TODO: include wire resistance
 	if (AnalogNVM *temp = dynamic_cast<AnalogNVM*>(**cell)){ // Analog eNVM
         if (regular)	// Regular write
-			static_cast<AnalogNVM*>(cell[x][y])->Write(deltaWeight, weight, minWeight, maxWeight);
+			static_cast<AnalogNVM*>(cell[x][y])->Write(deltaWeight, weight, minWeight, maxWeight, resDeltaWeight, resPulseNum);
         else{	
 			double conductance = 0;
 			double maxConductance = static_cast<eNVM*>(cell[x][y])->maxConductance;

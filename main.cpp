@@ -173,7 +173,8 @@ int main(int argc, char ** argv) {
 	srand(0);	// Pseudorandom number seed
 	
 	std::ofstream mywriteoutfile;
-	mywriteoutfile.open("output.csv");                                                                                                            
+	mywriteoutfile.open("output.csv");
+	int totalArraySize = param->nInput*param->nHide + param->nHide*param->nOutput;                                                                                                        
 	for (int i=1; i<=param->totalNumEpochs/param->interNumEpochs; i++){
 		Train(param->numTrainImagesPerEpoch, param->interNumEpochs,param->optimization_type);
 		if (!param->useHardwareInTraining && param->useHardwareInTestingFF) { WeightToConductance(); }
@@ -200,8 +201,12 @@ int main(int argc, char ** argv) {
             printf("\tTransfer latency=%.4e s\n", subArrayIH->transferLatency);	
             printf("\tTransfer energy=%.4e J\n", arrayIH->transferEnergy + subArrayIH->transferDynamicEnergy + arrayHO->transferEnergy + subArrayHO->transferDynamicEnergy);
          }
-        // printf("\tThe total weight update = %.4e\n", totalWeightUpdate);
-        // printf("\tThe total pulse number = %.4e\n", totalNumPulse);
+        printf("\tThe total weight update=%.4e\n", totalWeightUpdate);
+        printf("\tThe total pulse number=%.4e\n", totalNumPulse);
+		printf("\tThe total actual conductance update=%.4e\n", actualConductanceUpdate);
+		printf("\tThe total actual pulse number=%.4e\n", actualNumPulse);
+		printf("\tThe total actual conductance update per synapse=%.4e\n", actualConductanceUpdate/totalArraySize);
+		printf("\tThe total actual pulse number per synapse=%.4e\n", actualNumPulse/totalArraySize);
 	}
 	// print the summary: 
 	printf("\n");

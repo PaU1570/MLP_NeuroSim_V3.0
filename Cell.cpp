@@ -228,7 +228,7 @@ double IdealDevice::Read(double voltage) {
 	}
 }
 
-void IdealDevice::Write(double deltaWeightNormalized, double weight, double minWeight, double maxWeight) {
+void IdealDevice::Write(double deltaWeightNormalized, double weight, double minWeight, double maxWeight, double* resDeltaWeight, double* resPulseNum) {
 	extern std::mt19937 gen;
 	if (deltaWeightNormalized >= 0) {
 		deltaWeightNormalized = deltaWeightNormalized/(maxWeight-minWeight);
@@ -370,7 +370,7 @@ double RealDevice::Read(double voltage) {	// Return read current (A)
 	}
 }
 
-void RealDevice::Write(double deltaWeightNormalized, double weight, double minWeight, double maxWeight) {
+void RealDevice::Write(double deltaWeightNormalized, double weight, double minWeight, double maxWeight, double* resDeltaCond, double* resPulseNum) {
 	double conductanceNew = conductance;	// =conductance if no update
 	if (deltaWeightNormalized > 0) {	// LTP
 		deltaWeightNormalized = deltaWeightNormalized/(maxWeight-minWeight);
@@ -446,6 +446,9 @@ void RealDevice::Write(double deltaWeightNormalized, double weight, double minWe
 	
 	conductancePrev = conductance;
 	conductance = conductanceNew;
+
+	*resDeltaCond = fabs(conductance - conductancePrev);
+	*resPulseNum = fabs(static_cast<double>(numPulse));
 }
 
 /* Real Logistic Device */
@@ -568,7 +571,7 @@ double RealLogisticDevice::Read(double voltage) {	// Return read current (A)
 	}
 }
 
-void RealLogisticDevice::Write(double deltaWeightNormalized, double weight, double minWeight, double maxWeight) {
+void RealLogisticDevice::Write(double deltaWeightNormalized, double weight, double minWeight, double maxWeight, double* resDeltaWeight, double* resPulseNum) {
 	double conductanceNew = conductance;	// =conductance if no update
 	if (deltaWeightNormalized > 0) {	// LTP
 		deltaWeightNormalized = deltaWeightNormalized/(maxWeight-minWeight);
@@ -740,7 +743,7 @@ double MeasuredDevice::Read(double voltage) {	// Return read current (A)
 	}
 }
 
-void MeasuredDevice::Write(double deltaWeightNormalized, double weight, double minWeight, double maxWeight) {
+void MeasuredDevice::Write(double deltaWeightNormalized, double weight, double minWeight, double maxWeight, double* resDeltaWeight, double* resPulseNum) {
 	double conductanceNew;
 	if (deltaWeightNormalized > 0) {    // LTP
 		deltaWeightNormalized = deltaWeightNormalized/(maxWeight-minWeight);
@@ -1440,7 +1443,7 @@ void _2T1F::WeightTransfer(void){
  } 
   
         
-void _2T1F::Write(double deltaWeightNormalized, double weight, double minWeight, double maxWeight) {
+void _2T1F::Write(double deltaWeightNormalized, double weight, double minWeight, double maxWeight, double* resDeltaWeight, double* resPulseNum) {
 	double conductanceNew = conductance;	// =conductance if no update
 	if (deltaWeightNormalized > 0) {	// LTP
 		deltaWeightNormalized = deltaWeightNormalized/(maxWeight-minWeight);

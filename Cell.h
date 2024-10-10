@@ -134,7 +134,7 @@ public:
 	double writeVoltageSquareSum;   // Sum of V^2 of non-identical pulses (for weight update energy calculation in subcircuits)
 
 	virtual double Read(double voltage) = 0;
-	virtual void Write(double deltaWeightNormalized, double weight, double minWeight, double maxWeight) = 0;
+	virtual void Write(double deltaWeightNormalized, double weight, double minWeight, double maxWeight, double* resDeltaWeight = nullptr, double* resPulseNum = nullptr) = 0;
 	double GetMaxReadCurrent(){
       if(cmosAccess && !FeFET)
           return readVoltage * 1/(1/avgMaxConductance+resistanceAccess);
@@ -165,7 +165,7 @@ class IdealDevice: public AnalogNVM {
 public:
 	IdealDevice(int x, int y, json* config);
 	double Read(double voltage);	// Return read current (A)
-	void Write(double deltaWeightNormalized, double weight, double minWeight, double maxWeight);
+	void Write(double deltaWeightNormalized, double weight, double minWeight, double maxWeight, double* resDeltaWeight=nullptr, double* resPulseNum=nullptr);
 };
 
 class RealDevice: public AnalogNVM {
@@ -183,7 +183,7 @@ public:
 
 	RealDevice(int x, int y, json* config);
 	double Read(double voltage);	// Return read current (A)
-	void Write(double deltaWeightNormalized, double weight, double minWeight, double maxWeight);
+	void Write(double deltaWeightNormalized, double weight, double minWeight, double maxWeight, double* resDeltaWeight=nullptr, double* resPulseNum=nullptr);
 };
 
 class RealLogisticDevice: public AnalogNVM {
@@ -200,7 +200,7 @@ public:
 
 	RealLogisticDevice(int x, int y, json* config);
 	double Read(double voltage);	// Return read current (A)
-	void Write(double deltaWeightNormalized, double weight, double minWeight, double maxWeight);
+	void Write(double deltaWeightNormalized, double weight, double minWeight, double maxWeight, double* resDeltaWeight=nullptr, double* resPulseNum=nullptr);
 };
 
 class MeasuredDevice: public AnalogNVM {
@@ -213,7 +213,7 @@ public:
 
 	MeasuredDevice(int x, int y, json* config);
 	double Read(double voltage);	// Return read current (A)
-	void Write(double deltaWeightNormalized, double weight, double minWeight, double maxWeight);
+	void Write(double deltaWeightNormalized, double weight, double minWeight, double maxWeight, double* resDeltaWeight=nullptr, double* resPulseNum=nullptr);
 };
 
 // code added
@@ -384,7 +384,7 @@ class _2T1F : public AnalogNVM{
   	double GetMaxReadCurrent() {return readVoltage * maxConductance;}
   	double GetMinReadCurrent() {return readVoltage * minConductance;}
   	double Read(double voltage) ;
-  	void Write(double deltaWeightNormalized, double weight, double minWeight, double maxWeight);
+  	void Write(double deltaWeightNormalized, double weight, double minWeight, double maxWeight, double* resDeltaWeight=nullptr, double* resPulseNum=nullptr);
     void WriteEnergyCalculation(double wireCapCol);
    // void WeightTransfer(double newConductance, char* mode);
     void WeightTransfer(void);

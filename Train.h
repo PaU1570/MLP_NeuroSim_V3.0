@@ -41,6 +41,9 @@
 #define TRAIN_H_
 extern double totalWeightUpdate; // track the total weight update (absolute value) during the whole training process
 extern double totalNumPulse;// track the total number of pulse for the weight update process; for Analog device only
+extern double actualConductanceUpdate; // track the total actual conductance update (absolute value) during the whole training process
+extern double actualNumPulse; // track the total actual number of pulse for the weight update process; for Analog device only
+
 // void Train(const int numTrain, const int epochs);
 void Train(const int numTrain, const int epochs, std::string optimization_type); // For decayed learning rate
 void WeightTransfer(void); // For decayed learning rate
