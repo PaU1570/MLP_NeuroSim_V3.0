@@ -51,7 +51,7 @@ def read_file(filename):
 
     return metadata, meas_params, meas_data
 
-def plot_1(meas_data, kpos, kneg):
+def plot_1(meas_data, kpos, kneg, filename = None, title = None):
     """
     Plot the measured data with points to be deleted in red and the rest in blue.
     
@@ -71,10 +71,15 @@ def plot_1(meas_data, kpos, kneg):
     ax.plot(meas_data[mask,1], meas_data[mask,3], label='R_high', ls='none', marker='o', color='r')
     ax.plot(meas_data[kneg,1][0], meas_data[kneg,3][0], label='R_high', ls='none', marker='o', color='b')
     ax.plot(meas_data[kpos,1][0], meas_data[kpos,3][0], label='R_high', ls='none', marker='o', color='b')
-    ax.set(xlabel='Pulse Amplitude (V)', ylabel='R_high (ohm)')
-    plt.draw()
+    title = title if title is not None else 'Pulsed Amplitude Sweep'
+    ax.set(xlabel='Pulse Amplitude (V)', ylabel='R_high (ohm)', title=title)
+    if filename is not None:
+        plt.savefig(filename)
+        print(f'Plot saved as {filename}')
+    else:
+        plt.draw()
 
-def nonlinear_fit(pulse_num_LTP, exp_LTP, pulse_num_LTD, exp_LTD, plotmode = 1, filename = None):
+def nonlinear_fit(pulse_num_LTP, exp_LTP, pulse_num_LTD, exp_LTD, plotmode = 1, filename = None, title = None):
     """
     Fit and plot LTP and LTD data according to NeuroSim model.
 
@@ -121,7 +126,8 @@ def nonlinear_fit(pulse_num_LTP, exp_LTP, pulse_num_LTD, exp_LTD, plotmode = 1, 
         ax.plot(pulse_num_LTD, exp_LTD, label='Exp. data (LTD)', ls='none', marker='o', color='r')
         ax.plot(xdata, y_bestfit_LTP, label=f'Best fit (LTP): A={best_A_LTP:.3f}, $R^2$={r_squared_LTP:.3f}', color='b')
         ax.plot(xdata, y_bestfit_LTD, label=f'Best fit (LTD): A={best_A_LTD:.3f}, $R^2$={r_squared_LTD:.3f}', color='r')
-        ax.set(xlabel='Normalized Pulse Number', ylabel='Normalized Conductance')
+        title = title if title is not None else 'Nonlinear Fit'
+        ax.set(xlabel='Normalized Pulse Number', ylabel='Normalized Conductance', title=title)
         ax.legend()
 
         if plotmode == 1:
@@ -405,45 +411,68 @@ def generate_config(meas_data, kpos, kneg, params, device_type='RealDevice', fil
         print("Configuration file written to", filename)
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Nonlinear fit for NeuroSim')
+def get_raw_data(meas_data, kpos, kneg):
+    exp_LTD_raw = np.flip(1. / meas_data[kpos,3][0])
+    exp_LTP_raw = 1. / meas_data[kneg,3][0]
+    pulse_num_LTD_raw = np.linspace(0, len(exp_LTD_raw) - 1, len(exp_LTD_raw))
+    pulse_num_LTP_raw = np.linspace(0, len(exp_LTP_raw) - 1, len(exp_LTP_raw))
+    return exp_LTD_raw, exp_LTP_raw, pulse_num_LTD_raw, pulse_num_LTP_raw
 
-    parser.add_argument('filename', type=str, help='Path to the input file')
-    parser.add_argument('--plotmode', type=str, choices=['noplot', 'plot', 'saveplot'], default='plot', help='Plot mode')
-    parser.add_argument('--device', type=str, choices=['RealDevice', 'MeasuredDevice', 'DigitalNVM'], default='RealDevice', help='Device type')
-    parser.add_argument('--dest', type=str, help='Destination folder for the results')
-    parser.add_argument('--configref', type=str, help='Reference configuration file')
-    parser.add_argument('--summary', dest='savesummary', action='store_true', help='Save summary file')
-    parser.add_argument('--verbose', dest='verbose', action='store_true', help='Verbose mode')
-    parser.add_argument('--absvolt', dest='absvolt', action='store_true', help='Use absolute voltage values')
+def normalize_raw_data(exp_LTD_raw, exp_LTP_raw, pulse_num_LTD_raw, pulse_num_LTP_raw):
+    exp_LTD_norm = (exp_LTD_raw - min(exp_LTD_raw))/(max(exp_LTD_raw) - min(exp_LTD_raw))
+    exp_LTP_norm = (exp_LTP_raw - min(exp_LTP_raw))/(max(exp_LTP_raw) - min(exp_LTP_raw))
+    pulse_num_LTD_norm = pulse_num_LTD_raw / max(pulse_num_LTD_raw)
+    pulse_num_LTP_norm = pulse_num_LTP_raw / max(pulse_num_LTP_raw)
+    return exp_LTD_norm, exp_LTP_norm, pulse_num_LTD_norm, pulse_num_LTP_norm
 
-    args = parser.parse_args()
-    filename = args.filename
+def save_summary(metadata, meas_params, meas_data, kpos, kneg, summary_data, filename):
+    with open(filename, 'w') as f:
+        f.write(','.join(list(metadata.keys())) + '\n')
+        f.write(','.join(list(metadata.values())) + '\n')
+        f.write(','.join(list(meas_params.keys())) + '\n')
+        f.write(','.join([str(x) for x in list(meas_params.values())]) + '\n')
+
+        f.write(f"VStartPos (V),VEndPos (V),VStartNeg (V),VEndNeg (V),twidth (s),onOffRatio,A_LTP,A_LTD,num_LTP,num_LTD,fit_R2_LTP,fit_R2_LTD\n")
+        f.write(f"{summary_data['VStartPos']},{summary_data['VEndPos']},{summary_data['VStartNeg']},{summary_data['VEndNeg']},{summary_data['twidth']},{summary_data['onOffRatio']},{summary_data['best_A_LTP']},{summary_data['best_A_LTD']},{summary_data['num_LTP']},{summary_data['num_LTD']},{summary_data['r_squared_LTP']},{summary_data['r_squared_LTD']}\n")
+        
+        f.write("Pulse Number,index,Pulse Amplitude (V),R_low (ohm),R_high (ohm)\n")
+        for i, (index, pulse_amplitude, R_low, R_high) in enumerate(np.vstack((meas_data[kpos,:][0], meas_data[kneg,:][0]))):
+            f.write(f"{i+1},{int(index)},{pulse_amplitude},{R_low},{R_high}\n")
+
+    print("Summary file written to", filename)
+
+def analyze(filename,
+            results_folder,
+            cutoffs=None,
+            plotmode=1,
+            saveconf=False,
+            configref=None,
+            savesummary=False,
+            device_type='RealDevice',
+            absvolt=False,
+            verbose=False,):    
+
     metadata, meas_params, meas_data = read_file(filename)
 
-    plotmode_map = {'plot': 1, 'noplot': 0, 'saveplot': 2}
-    plotmode = plotmode_map[args.plotmode]
-    
-    saveconf = args.configref is not None
-    
-    results_folder = args.dest if args.dest is not None else os.path.join(os.path.dirname(filename), 'Results')
-    if saveconf or args.savesummary or plotmode != 0:
+    if saveconf or savesummary or plotmode != 0:
         if not os.path.exists(results_folder):
             os.makedirs(results_folder)
 
-    device_type = args.device
-
-    if args.verbose:
+    if verbose:
         for key, value in metadata.items():
             print(f"{key}: {value}")
 
         for key, value in meas_params.items():
             print(f"{key}: {value}")
 
-    VStartPos = max(0.6, meas_params['startVolage1']) # (sic)
-    VEndPos = min(5, meas_params['endVoltage1'])
-    VStartNeg = min(-0.6, meas_params['startVolage2']) # (sic)
-    VEndNeg = max(-3, meas_params['endVoltage2'])
+    if cutoffs is None:
+        VStartPos = meas_params['startVolage1'] # (sic)
+        VEndPos = meas_params['endVoltage1']
+        VStartNeg = meas_params['startVolage2'] # (sic)
+        VEndNeg = meas_params['endVoltage2']
+    else:
+        VStartPos, VEndPos, VStartNeg, VEndNeg = cutoffs
+
     stepSize = meas_params['stepSize']
     twidth = meas_params['pulseWidth']
 
@@ -464,60 +493,56 @@ if __name__ == '__main__':
     #kpos = np.where((meas_data[:,1] > VStartPos) & (meas_data[:,1] < VEndPos))
     #kneg = np.where((meas_data[:,1] < VStartNeg) & (meas_data[:,1] > VEndNeg))
     
-    if plotmode == 1:
-        plot_1(meas_data, kpos, kneg)
+    if plotmode != 0:
+        plot_filename = None if plotmode == 1 else os.path.join(results_folder, os.path.basename(filename.replace('.csv', '_raw.png')))
+        plot_1(meas_data, kpos, kneg, title=metadata['device_id'], filename=plot_filename)
 
     # get on/off ratio
     onOffRatio = max(meas_data[kpos,3][0]) / min(meas_data[kpos,3][0])
 
-    exp_LTD_raw = np.flip(1. / meas_data[kpos,3][0])
-    exp_LTP_raw = 1. / meas_data[kneg,3][0]
-    pulse_num_LTD_raw = np.linspace(0, len(exp_LTD_raw) - 1, len(exp_LTD_raw))
-    pulse_num_LTP_raw = np.linspace(0, len(exp_LTP_raw) - 1, len(exp_LTP_raw))
-    # normalize
-    exp_LTD_norm = (exp_LTD_raw - min(exp_LTD_raw))/(max(exp_LTD_raw) - min(exp_LTD_raw))
-    exp_LTP_norm = (exp_LTP_raw - min(exp_LTP_raw))/(max(exp_LTP_raw) - min(exp_LTP_raw))
-    pulse_num_LTD_norm = pulse_num_LTD_raw / max(pulse_num_LTD_raw)
-    pulse_num_LTP_norm = pulse_num_LTP_raw / max(pulse_num_LTP_raw)
+    exp_LTD_raw, exp_LTP_raw, pulse_num_LTD_raw, pulse_num_LTP_raw = get_raw_data(meas_data, kpos, kneg)
+    exp_LTD_norm, exp_LTP_norm, pulse_num_LTD_norm, pulse_num_LTP_norm = normalize_raw_data(exp_LTD_raw, exp_LTP_raw, pulse_num_LTD_raw, pulse_num_LTP_raw)
 
     plot_filename = os.path.join(results_folder, os.path.basename(filename.replace('.csv', '_fit.png')))
-    best_A_LTP, best_A_LTD, r_squared_LTP, r_squared_LTD = nonlinear_fit(pulse_num_LTP_norm, exp_LTP_norm, pulse_num_LTD_norm, exp_LTD_norm, plotmode=plotmode, filename=plot_filename)
-    if args.verbose:
+    best_A_LTP, best_A_LTD, r_squared_LTP, r_squared_LTD = nonlinear_fit(pulse_num_LTP_norm, exp_LTP_norm, pulse_num_LTD_norm, exp_LTD_norm, plotmode=plotmode, filename=plot_filename, title=metadata['device_id'])
+    if verbose:
         print(f"Best fit parameter A for LTP: {best_A_LTP:.3f}")
         print(f"Best fit parameter A for LTD: {best_A_LTD:.3f}")
 
     best_NL_LTP = map_A_to_NL(best_A_LTP)
     best_NL_LTD = map_A_to_NL(best_A_LTD)
-    if args.verbose:
+    if verbose:
         print(f"Best fit nonlinearity label for LTP: {best_NL_LTP:.2f}")
         print(f"Best fit nonlinearity label for LTD: {best_NL_LTD:.2f}")
 
+    summary_data = {
+        'VStartPos': VStartPos,
+        'VEndPos': VEndPos,
+        'VStartNeg': VStartNeg,
+        'VEndNeg': VEndNeg,
+        'twidth': twidth,
+        'onOffRatio': onOffRatio,
+        'best_A_LTP': best_A_LTP,
+        'best_A_LTD': best_A_LTD,
+        'num_LTP': len(kpos[0]),
+        'num_LTD': len(kneg[0]),
+        'r_squared_LTP': r_squared_LTP,
+        'r_squared_LTD': r_squared_LTD
+    }
+
     # write results to file
-    if args.savesummary:
+    if savesummary:
         allResults_filename = os.path.join(results_folder, os.path.basename(filename.replace('.csv', '_Summary.dat')))
-        with open(allResults_filename, 'w') as f:
-            f.write(','.join(list(metadata.keys())) + '\n')
-            f.write(','.join(list(metadata.values())) + '\n')
-            f.write(','.join(list(meas_params.keys())) + '\n')
-            f.write(','.join([str(x) for x in list(meas_params.values())]) + '\n')
-
-            f.write(f"VStartPos (V),VEndPos (V),VStartNeg (V),VEndNeg (V),twidth (s),onOffRatio,A_LTP,A_LTD,num_LTP,num_LTD,fit_R2_LTP,fit_R2_LTD\n")
-            f.write(f"{VStartPos},{VEndPos},{VStartNeg},{VEndNeg},{twidth},{onOffRatio},{best_A_LTP},{best_A_LTD},{len(kneg[0])},{len(kpos[0])},{r_squared_LTP},{r_squared_LTD}\n")
-            
-            f.write("Pulse Number,index,Pulse Amplitude (V),R_low (ohm),R_high (ohm)\n")
-            for i, (index, pulse_amplitude, R_low, R_high) in enumerate(np.vstack((meas_data[kpos,:][0], meas_data[kneg,:][0]))):
-                f.write(f"{i+1},{int(index)},{pulse_amplitude},{R_low},{R_high}\n")
-
-        print("Summary file written to", allResults_filename)
+        save_summary(metadata, meas_params, meas_data, kpos, kneg, summary_data, allResults_filename)
 
     params = {
         'readVoltage': 0.1,
         'twidth': twidth,
-        'VStartNeg': abs(VStartNeg) if args.absvolt else VStartNeg,
-        'VEndNeg': abs(VEndNeg) if args.absvolt else VEndNeg,
-        'VStartPos': abs(VStartPos) if args.absvolt else VStartPos,
-        'VEndPos': abs(VEndPos) if args.absvolt else VEndPos,
-        'stepSizeLTP': stepSize if args.absvolt else -stepSize,
+        'VStartNeg': abs(VStartNeg) if absvolt else VStartNeg,
+        'VEndNeg': abs(VEndNeg) if absvolt else VEndNeg,
+        'VStartPos': abs(VStartPos) if absvolt else VStartPos,
+        'VEndPos': abs(VEndPos) if absvolt else VEndPos,
+        'stepSizeLTP': stepSize if absvolt else -stepSize,
         'stepSizeLTD': stepSize,
         'NL': 40,
         'best_NL_LTP': best_NL_LTP,
@@ -526,10 +551,44 @@ if __name__ == '__main__':
         'sigmaDtoD': 0.05
     }
 
-    if saveconf:
+    if saveconf:       
         config_filename = os.path.join(results_folder, os.path.basename(filename.replace('.csv', '.json')))
-        generate_config(meas_data, kpos, kneg, params, filename=config_filename, device_type=device_type, ref_config=args.configref)
+        generate_config(meas_data, kpos, kneg, params, filename=config_filename, device_type=device_type, ref_config=configref)
 
     if plotmode == 1:
-        print("Waiting for plots to close to terminate program...")
+        print("Waiting for plots to close to continue...")
         plt.show()
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Nonlinear fit for NeuroSim')
+
+    parser.add_argument('filename', type=str, help='Path to the input file')
+    parser.add_argument('--plotmode', type=str, choices=['noplot', 'plot', 'saveplot'], default='plot', help='Plot mode')
+    parser.add_argument('--device', type=str, choices=['RealDevice', 'MeasuredDevice', 'DigitalNVM'], default='RealDevice', help='Device type')
+    parser.add_argument('--dest', type=str, help='Destination folder for the results')
+    parser.add_argument('--configref', type=str, help='Reference configuration file')
+    parser.add_argument('--summary', dest='savesummary', action='store_true', help='Save summary file')
+    parser.add_argument('--verbose', dest='verbose', action='store_true', help='Verbose mode')
+    parser.add_argument('--absvolt', dest='absvolt', action='store_true', help='Use absolute voltage values')
+    parser.add_argument('--cutoffs', dest='cutoffs', nargs=4, type=float, help='Cutoff voltages for positive and negative pulses (VStartPos, VEndPos, VStartNeg, VEndNeg)')
+
+    args = parser.parse_args()
+    filename = args.filename
+
+    plotmode_map = {'plot': 1, 'noplot': 0, 'saveplot': 2}
+    plotmode = plotmode_map[args.plotmode]
+    
+    saveconf = args.configref is not None
+    
+    results_folder = args.dest if args.dest is not None else os.path.join(os.path.dirname(filename), 'Results')
+
+    analyze(filename,
+            results_folder,
+            cutoffs=args.cutoffs,
+            plotmode=plotmode,
+            saveconf=saveconf,
+            configref=args.configref,
+            savesummary=args.savesummary,
+            device_type=args.device,
+            absvolt=args.absvolt,
+            verbose=args.verbose)
