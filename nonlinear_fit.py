@@ -307,17 +307,36 @@ def map_A_to_NL(A):
     return sign * 0.01 * (min_index + 1)
     
 
-def generate_config(meas_data, kpos, kneg, params, device_type='RealDevice', filename=None, ref_config=None):
+def generate_config(LTD_data,
+                    LTP_data,
+                    params,
+                    device_type='RealDevice',
+                    filename=None,
+                    ref_config=None,
+                    readPulseWidth='auto',
+                    numLevelsLTP='count',
+                    numLevelsLTD='count'):
     """
     Generate a JSON configuration file based on the measured data and the best fit parameters.
 
     Args:
-        meas_data: (np.array) Measured data
-        kpos: (np.array) Indices of positive pulses
-        kneg: (np.array) Indices of negative pulses
+        LTD_data: (np.ndarray) Measured LTD conductance data (already truncated, not normalized)
+        LTP_data: (np.ndarray) Measured LTP conductance data (already truncated, not normalized)
         params: (dict) Measurement parameters: readVoltage, twidth, VStartNeg, VEndNeg, VStartPos, VEndPos, stepSizeLTD, stepSizeLTP, NL, best_NL_LTP, best_NL_LTD, sigmaCtoC, sigmaDtoD
-        device_type: (str) Type of device (currently only 'RealDevice' is supported) TODO: add more device types
+        device_type: (str) Type of device
+        filename: (str) Name of the output JSON file. If None, the config is printed to the console.
+        ref_config: (str) Path to a reference configuration file. If None, the default configuration is used.
+        readPulseWidth: (str) Read pulse width. If 'auto', it is set equal to the write pulse width.
+        numLevelsLTP: (str) Number of levels for LTP. If 'count', the number of levels is counted from the data.
+        numLevelsLTD: (str) Number of levels for LTD. If 'count', the number of levels is counted from the data.
     """
+
+    if readPulseWidth == 'auto':
+        readPulseWidth = params['twidth']
+    if numLevelsLTP == 'count':
+        numLevelsLTP = len(LTP_data)
+    if numLevelsLTD == 'count':
+        numLevelsLTD = len(LTD_data)
 
     # load reference config
     if ref_config is None:
@@ -339,20 +358,20 @@ def generate_config(meas_data, kpos, kneg, params, device_type='RealDevice', fil
 
     match device_type:
         case 'RealDevice':
-            maxConductance = 1./min(meas_data[kpos,3][0])
-            minConductance = 1./max(meas_data[kpos,3][0])
+            maxConductance = max(max(LTP_data), max(LTD_data))
+            minConductance = min(min(LTP_data), min(LTD_data))
             config['device-params'][device_type]['maxConductance'] = maxConductance
             config['device-params'][device_type]['minConductance'] = minConductance
             config['device-params'][device_type]['avgMaxConductance'] = maxConductance
             config['device-params'][device_type]['avgMinConductance'] = minConductance
             config['device-params'][device_type]['readVoltage'] = params['readVoltage']
-            config['device-params'][device_type]['readPulseWidth'] = params['twidth']
+            config['device-params'][device_type]['readPulseWidth'] = readPulseWidth
             config['device-params'][device_type]['writeVoltageLTP'] = params['VEndNeg']
             config['device-params'][device_type]['writeVoltageLTD'] = params['VEndPos']
             config['device-params'][device_type]['writePulseWidthLTP'] = params['twidth']
             config['device-params'][device_type]['writePulseWidthLTD'] = params['twidth']
-            config['device-params'][device_type]['maxNumLevelLTP'] = len(kneg[0])
-            config['device-params'][device_type]['maxNumLevelLTD'] = len(kpos[0])
+            config['device-params'][device_type]['maxNumLevelLTP'] = numLevelsLTP
+            config['device-params'][device_type]['maxNumLevelLTD'] = numLevelsLTD
             config['device-params'][device_type]['NL'] = params['NL'] # this is not used if nonlinearIV = False
             config['device-params'][device_type]['nonIdenticalPulse']['enabled'] = True
             config['device-params'][device_type]['nonIdenticalPulse']['VinitLTP'] = params['VStartNeg']
@@ -369,14 +388,14 @@ def generate_config(meas_data, kpos, kneg, params, device_type='RealDevice', fil
             config['device-params'][device_type]['weightUpdateVariationParams']['sigmaCtoC'] = params['sigmaCtoC']
         
         case 'DigitalNVM':
-            maxConductance = 1./min(meas_data[kpos,3][0])
-            minConductance = 1./max(meas_data[kpos,3][0])
+            maxConductance = max(max(LTP_data), max(LTD_data))
+            minConductance = min(min(LTP_data), min(LTD_data))
             config['device-params'][device_type]['maxConductance'] = maxConductance
             config['device-params'][device_type]['minConductance'] = minConductance
             config['device-params'][device_type]['avgMaxConductance'] = maxConductance
             config['device-params'][device_type]['avgMinConductance'] = minConductance
             config['device-params'][device_type]['readVoltage'] = params['readVoltage']
-            config['device-params'][device_type]['readPulseWidth'] = params['twidth']
+            config['device-params'][device_type]['readPulseWidth'] = readPulseWidth
             config['device-params'][device_type]['writeVoltageLTP'] = params['VEndNeg']
             config['device-params'][device_type]['writeVoltageLTD'] = params['VEndPos']
             config['device-params'][device_type]['writePulseWidthLTP'] = params['twidth']
@@ -385,7 +404,7 @@ def generate_config(meas_data, kpos, kneg, params, device_type='RealDevice', fil
 
         case 'MeasuredDevice':
             config['device-params'][device_type]['readVoltage'] = params['readVoltage']
-            config['device-params'][device_type]['readPulseWidth'] = params['twidth']
+            config['device-params'][device_type]['readPulseWidth'] = readPulseWidth
             config['device-params'][device_type]['writeVoltageLTP'] = params['VEndNeg']
             config['device-params'][device_type]['writeVoltageLTD'] = params['VEndPos']
             config['device-params'][device_type]['writePulseWidthLTP'] = params['twidth']
@@ -400,8 +419,8 @@ def generate_config(meas_data, kpos, kneg, params, device_type='RealDevice', fil
             config['device-params'][device_type]['nonIdenticalPulse']['PWinitLTD'] = params['twidth']
             config['device-params'][device_type]['nonIdenticalPulse']['PWstepLTP'] = 0
             config['device-params'][device_type]['nonIdenticalPulse']['PWstepLTD'] = 0
-            config['device-params'][device_type]['rawDataConductanceLTP'] = list(np.flip(1./meas_data[kpos,3][0]))
-            config['device-params'][device_type]['rawDataConductanceLTD'] = list(np.flip(1./meas_data[kneg,3][0]))
+            config['device-params'][device_type]['rawDataConductanceLTP'] = np.sort(LTP_data)
+            config['device-params'][device_type]['rawDataConductanceLTD'] = -np.sort(-LTD_data)
 
     if filename is None:
         print(json.dumps(config, indent=4))
@@ -432,8 +451,8 @@ def save_summary(metadata, meas_params, meas_data, kpos, kneg, summary_data, fil
         f.write(','.join(list(meas_params.keys())) + '\n')
         f.write(','.join([str(x) for x in list(meas_params.values())]) + '\n')
 
-        f.write(f"VStartPos (V),VEndPos (V),VStartNeg (V),VEndNeg (V),twidth (s),onOffRatio,A_LTP,A_LTD,num_LTP,num_LTD,fit_R2_LTP,fit_R2_LTD\n")
-        f.write(f"{summary_data['VStartPos']},{summary_data['VEndPos']},{summary_data['VStartNeg']},{summary_data['VEndNeg']},{summary_data['twidth']},{summary_data['onOffRatio']},{summary_data['best_A_LTP']},{summary_data['best_A_LTD']},{summary_data['num_LTP']},{summary_data['num_LTD']},{summary_data['r_squared_LTP']},{summary_data['r_squared_LTD']}\n")
+        f.write(f"VStartPos (V),VEndPos (V),VStartNeg (V),VEndNeg (V),twidth (s),onOffRatio,A_LTP,A_LTD,NL_LTP,NL_LTD,num_LTP,num_LTD,fit_R2_LTP,fit_R2_LTD\n")
+        f.write(f"{summary_data['VStartPos']},{summary_data['VEndPos']},{summary_data['VStartNeg']},{summary_data['VEndNeg']},{summary_data['twidth']},{summary_data['onOffRatio']},{summary_data['best_A_LTP']},{summary_data['best_A_LTD']},{summary_data['best_NL_LTP']},{summary_data['best_NL_LTD']},{summary_data['num_LTP']},{summary_data['num_LTD']},{summary_data['r_squared_LTP']},{summary_data['r_squared_LTD']}\n")
         
         f.write("Pulse Number,index,Pulse Amplitude (V),R_low (ohm),R_high (ohm)\n")
         for i, (index, pulse_amplitude, R_low, R_high) in enumerate(np.vstack((meas_data[kpos,:][0], meas_data[kneg,:][0]))):
@@ -524,6 +543,8 @@ def analyze(filename,
         'onOffRatio': onOffRatio,
         'best_A_LTP': best_A_LTP,
         'best_A_LTD': best_A_LTD,
+        'best_NL_LTP': best_NL_LTP,
+        'best_NL_LTD': best_NL_LTD,
         'num_LTP': len(kpos[0]),
         'num_LTD': len(kneg[0]),
         'r_squared_LTP': r_squared_LTP,
@@ -553,7 +574,7 @@ def analyze(filename,
 
     if saveconf:       
         config_filename = os.path.join(results_folder, os.path.basename(filename.replace('.csv', '.json')))
-        generate_config(meas_data, kpos, kneg, params, filename=config_filename, device_type=device_type, ref_config=configref)
+        generate_config(exp_LTD_raw, exp_LTP_raw, params, filename=config_filename, device_type=device_type, ref_config=configref)
 
     if plotmode == 1:
         print("Waiting for plots to close to continue...")
