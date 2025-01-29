@@ -101,24 +101,38 @@ def nonlinear_fit(pulse_num_LTP, exp_LTP, pulse_num_LTD, exp_LTD, plotmode = 1, 
         B = 1./(1 - np.exp(-1./A))
         return B * (1 - np.exp(-pulse_number / A))
     
+    # compute with the 'expected' sign
     popt_ltp, _ = curve_fit(model, pulse_num_LTP, exp_LTP, p0=[1.])
     popt_ltd, _ = curve_fit(model, pulse_num_LTD, exp_LTD, p0=[-1.])
+    # compute with the opposite sign
+    rpopt_ltp, _ = curve_fit(model, pulse_num_LTP, exp_LTP, p0=[-1.])
+    rpopt_ltd, _ = curve_fit(model, pulse_num_LTD, exp_LTD, p0=[1.])
+
     best_A_LTP = popt_ltp[0]
     best_A_LTD = popt_ltd[0]
+    rbest_A_LTP = rpopt_ltp[0]
+    rbest_A_LTD = rpopt_ltd[0]
 
-    xdata = np.linspace(0, 1, 100)
-    y_bestfit_LTP = model(xdata, best_A_LTP)
-    y_bestfit_LTD = model(xdata, best_A_LTD)
+    def square_loss(y_true, y_pred):
+        return np.sum((y_true - y_pred)**2)
+    
+    if (square_loss(exp_LTP, model(pulse_num_LTP, rbest_A_LTD)) < square_loss(exp_LTP, model(pulse_num_LTP, best_A_LTP))):
+        best_A_LTP = rbest_A_LTP
+    if (square_loss(exp_LTD, model(pulse_num_LTD, rbest_A_LTD)) < square_loss(exp_LTD, model(pulse_num_LTD, best_A_LTD))):
+        best_A_LTD = rbest_A_LTD
 
     # compute r^2 values
     def r_squared(y_true, y_pred):
-        residuals = y_true - y_pred
-        ss_res = np.sum(residuals**2)
+        ss_res = square_loss(y_true, y_pred)
         ss_tot = np.sum((y_true - np.mean(y_true))**2)
         return 1 - (ss_res / ss_tot)
     
     r_squared_LTP = r_squared(exp_LTP, model(pulse_num_LTP, best_A_LTP))
     r_squared_LTD = r_squared(exp_LTD, model(pulse_num_LTD, best_A_LTD))
+    
+    xdata = np.linspace(0, 1, 100)
+    y_bestfit_LTP = model(xdata, best_A_LTP)
+    y_bestfit_LTD = model(xdata, best_A_LTD)
 
     if plotmode != 0:
         fig, ax = plt.subplots()
